@@ -90,6 +90,19 @@ class SongRepository {
         .write(SongsCompanion(bpmManual: Value(bpm)));
   }
 
+  Future<void> updateMetadata(
+    String songId, {
+    required String title,
+    String? artist,
+  }) {
+    return (_db.update(_db.songs)..where((s) => s.id.equals(songId))).write(
+      SongsCompanion(
+        title: Value(title),
+        artist: Value(artist),
+      ),
+    );
+  }
+
   Future<void> deleteSong(String id) =>
       (_db.delete(_db.songs)..where((s) => s.id.equals(id))).go();
 

@@ -8,12 +8,14 @@ class SongTile extends StatelessWidget {
     required this.song,
     this.onTap,
     this.trailing,
+    this.leading,
     this.onEditBpm,
   });
 
   final Song song;
   final VoidCallback? onTap;
   final Widget? trailing;
+  final Widget? leading;
   final void Function(Song song)? onEditBpm;
 
   @override
@@ -26,7 +28,7 @@ class SongTile extends StatelessWidget {
 
     return ListTile(
       onTap: onTap,
-      leading: const CircleAvatar(child: Icon(Icons.music_note)),
+      leading: leading ?? const CircleAvatar(child: Icon(Icons.music_note)),
       title: Text(song.title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
         [
