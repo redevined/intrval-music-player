@@ -40,10 +40,28 @@ class SetListScreen extends ConsumerWidget {
                             ),
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: () =>
-                              ref.read(practiceSetRepositoryProvider).delete(set.id),
+                        PopupMenuButton<_SetAction>(
+                          icon: const Icon(Icons.more_vert),
+                          onSelected: (action) async {
+                            switch (action) {
+                              case _SetAction.rename:
+                                await _renameSet(context, ref, set);
+                              case _SetAction.delete:
+                                await ref
+                                    .read(practiceSetRepositoryProvider)
+                                    .delete(set.id);
+                            }
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: _SetAction.rename,
+                              child: Text('Rename'),
+                            ),
+                            PopupMenuItem(
+                              value: _SetAction.delete,
+                              child: Text('Delete'),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -89,9 +107,7 @@ class SetListScreen extends ConsumerWidget {
       ),
     );
     if (name != null && name.isNotEmpty) {
-      final id = await ref
-          .read(practiceSetRepositoryProvider)
-          .createWithDefaultEntries(name);
+      final id = await ref.read(practiceSetRepositoryProvider).create(name);
       if (context.mounted) {
         final set = await ref.read(practiceSetRepositoryProvider).getById(id);
         if (set != null && context.mounted) {
@@ -102,4 +118,38 @@ class SetListScreen extends ConsumerWidget {
       }
     }
   }
+
+  Future<void> _renameSet(
+    BuildContext context,
+    WidgetRef ref,
+    PracticeSet set,
+  ) async {
+    final controller = TextEditingController(text: set.name);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Rename set'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Name'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (name != null && name.isNotEmpty) {
+      await ref.read(practiceSetRepositoryProvider).rename(set.id, name);
+    }
+  }
 }
+
+enum _SetAction { rename, delete }

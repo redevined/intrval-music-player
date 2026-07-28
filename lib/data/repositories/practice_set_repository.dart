@@ -1,7 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../core/constants.dart';
 import '../database/database.dart';
 
 class PracticeSetRepository {
@@ -30,6 +29,10 @@ class PracticeSetRepository {
   Future<void> update(String id, PracticeSetsCompanion changes) {
     return (_db.update(_db.practiceSets)..where((s) => s.id.equals(id)))
         .write(changes);
+  }
+
+  Future<void> rename(String id, String name) {
+    return update(id, PracticeSetsCompanion(name: Value(name)));
   }
 
   Future<void> delete(String id) =>
@@ -90,15 +93,5 @@ class PracticeSetRepository {
   Future<void> setLastPlayedSong(String entryId, String songId) {
     return (_db.update(_db.setEntries)..where((e) => e.id.equals(entryId)))
         .write(SetEntriesCompanion(lastPlayedSongId: Value(songId)));
-  }
-
-  /// Creates a new set pre-populated with [AppDefaults.newSetEntryCount]
-  /// empty entries, matching the app's default template.
-  Future<String> createWithDefaultEntries(String name) async {
-    final id = await create(name);
-    for (var i = 0; i < AppDefaults.newSetEntryCount; i++) {
-      await addEntry(id, label: 'Dance ${i + 1}');
-    }
-    return id;
   }
 }

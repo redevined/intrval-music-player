@@ -111,7 +111,6 @@ class SetBuilderScreen extends ConsumerWidget {
           practiceSet.id,
           label: source.label,
           playlistId: source.playlistId,
-          folderId: source.folderId,
         );
   }
 
@@ -280,8 +279,6 @@ class SetBuilderScreen extends ConsumerWidget {
 
   Future<_SourcePick?> _pickSource(BuildContext context, WidgetRef ref) async {
     final playlists = ref.read(playlistsProvider).valueOrNull ?? const <Playlist>[];
-    final folders =
-        ref.read(bookmarkedFoldersProvider).valueOrNull ?? const <BookmarkedFolder>[];
 
     return showModalBottomSheet<_SourcePick>(
       context: context,
@@ -289,41 +286,31 @@ class SetBuilderScreen extends ConsumerWidget {
       builder: (context) => DraggableScrollableSheet(
         expand: false,
         initialChildSize: 0.6,
-        builder: (context, scrollController) => ListView(
-          controller: scrollController,
-          children: [
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('Playlists', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-            ...playlists.map((p) => ListTile(
-                  leading: const Icon(Icons.queue_music),
-                  title: Text(p.name),
-                  onTap: () => Navigator.of(context).pop(
-                    _SourcePick(label: p.name, playlistId: p.id),
+        builder: (context, scrollController) => playlists.isEmpty
+            ? const Center(child: Text('No playlists yet. Create one first.'))
+            : ListView(
+                controller: scrollController,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('Playlists', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
-                )),
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('Folders', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-            ...folders.map((f) => ListTile(
-                  leading: const Icon(Icons.folder),
-                  title: Text(f.displayName),
-                  onTap: () => Navigator.of(context).pop(
-                    _SourcePick(label: f.displayName, folderId: f.id),
-                  ),
-                )),
-          ],
-        ),
+                  ...playlists.map((p) => ListTile(
+                        leading: const Icon(Icons.queue_music),
+                        title: Text(p.name),
+                        onTap: () => Navigator.of(context).pop(
+                          _SourcePick(label: p.name, playlistId: p.id),
+                        ),
+                      )),
+                ],
+              ),
       ),
     );
   }
 }
 
 class _SourcePick {
-  _SourcePick({required this.label, this.playlistId, this.folderId});
+  _SourcePick({required this.label, this.playlistId});
   final String label;
   final String? playlistId;
-  final String? folderId;
 }
