@@ -26,6 +26,11 @@ class Songs extends Table {
   TextColumn get sourceFolderId =>
       text().nullable().references(BookmarkedFolders, #id)();
 
+  /// Hidden songs are excluded from the Library list by default (but still
+  /// exist for playlists/sets that already reference them). Toggled from
+  /// the Library's per-song menu; a "show hidden" filter reveals them again.
+  BoolColumn get isHidden => boolean().withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {id};
 }

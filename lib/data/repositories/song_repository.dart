@@ -16,8 +16,12 @@ class SongRepository {
     double? maxBpm,
     SongSortField sortField = SongSortField.title,
     bool ascending = true,
+    bool includeHidden = false,
   }) {
     final select = _db.select(_db.songs);
+    if (!includeHidden) {
+      select.where((s) => s.isHidden.equals(false));
+    }
     if (query != null && query.trim().isNotEmpty) {
       final like = '%${query.trim()}%';
       select.where((s) =>
@@ -109,4 +113,16 @@ class SongRepository {
   Future<List<Song>> songsForFolder(String folderId) =>
       (_db.select(_db.songs)..where((s) => s.sourceFolderId.equals(folderId)))
           .get();
+
+  Future<void> setHidden(String songId, bool hidden) {
+    return (_db.update(_db.songs)..where((s) => s.id.equals(songId)))
+        .write(SongsCompanion(isHidden: Value(hidden)));
+  }
+
+  /// All currently-imported song URIs, used by the library auto-scanner to
+  /// skip files that have already been imported.
+  Future<Set<String>> allUris() async {
+    final rows = await (_db.selectOnly(_db.songs)..addColumns([_db.songs.uri])).get();
+    return rows.map((r) => r.read(_db.songs.uri)!).toSet();
+  }
 }

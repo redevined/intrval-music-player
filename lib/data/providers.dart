@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/audio_player_service.dart';
 import '../services/bpm_detection_service.dart';
 import '../services/file_import_service.dart';
+import '../services/music_library_scanner.dart';
 import 'database/database.dart';
 import 'repositories/folder_repository.dart';
 import 'repositories/playlist_repository.dart';
@@ -46,4 +47,12 @@ final folderRepositoryProvider = Provider<FolderRepository>((ref) {
 
 final practiceSetRepositoryProvider = Provider<PracticeSetRepository>((ref) {
   return PracticeSetRepository(ref.watch(databaseProvider));
+});
+
+final musicLibraryScannerProvider = Provider<MusicLibraryScanner>((ref) {
+  return MusicLibraryScanner(
+    ref.watch(songRepositoryProvider),
+    ref.watch(fileImportServiceProvider),
+    ref.watch(bpmDetectionServiceProvider),
+  );
 });

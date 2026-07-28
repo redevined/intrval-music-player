@@ -9,14 +9,12 @@ class SongTile extends StatelessWidget {
     this.onTap,
     this.trailing,
     this.leading,
-    this.onEditBpm,
   });
 
   final Song song;
   final VoidCallback? onTap;
   final Widget? trailing;
   final Widget? leading;
-  final void Function(Song song)? onEditBpm;
 
   @override
   Widget build(BuildContext context) {
@@ -39,23 +37,20 @@ class SongTile extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
       ),
       trailing: trailing ??
-          InkWell(
-            onTap: onEditBpm == null ? null : () => onEditBpm!(song),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    bpm != null ? '${bpm.round()} BPM' : '-- BPM',
-                    style: Theme.of(context).textTheme.labelMedium,
-                  ),
-                  if (isManualBpm) ...[
-                    const SizedBox(width: 4),
-                    const Icon(Icons.edit, size: 14),
-                  ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  bpm != null ? '${bpm.round()} BPM' : '-- BPM',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+                if (isManualBpm) ...[
+                  const SizedBox(width: 4),
+                  const Icon(Icons.edit, size: 14),
                 ],
-              ),
+              ],
             ),
           ),
     );

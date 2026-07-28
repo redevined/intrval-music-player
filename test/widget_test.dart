@@ -11,6 +11,15 @@ import 'package:intrval_music_player/app.dart';
 import 'package:intrval_music_player/data/database/database.dart';
 import 'package:intrval_music_player/data/providers.dart';
 import 'package:intrval_music_player/services/audio_player_service.dart';
+import 'package:intrval_music_player/services/music_library_scanner.dart';
+
+/// The real scanner hits platform channels (permission_handler) and the
+/// filesystem, neither of which are available in the widget test harness -
+/// stub it out so it's a no-op.
+class _NoopMusicLibraryScanner implements MusicLibraryScanner {
+  @override
+  Future<void> scan() async {}
+}
 
 void main() {
   testWidgets('HomeShell renders all nav destinations and switches tabs',
@@ -22,6 +31,7 @@ void main() {
             AppDatabase.forTesting(NativeDatabase.memory()),
           ),
           audioHandlerProvider.overrideWithValue(AudioPlayerHandler()),
+          musicLibraryScannerProvider.overrideWithValue(_NoopMusicLibraryScanner()),
         ],
         child: const IntrvalApp(),
       ),

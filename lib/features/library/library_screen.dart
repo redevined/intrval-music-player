@@ -4,19 +4,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
 import '../../data/repositories/song_repository.dart';
-import '../../widgets/bpm_edit_dialog.dart';
+import '../../widgets/song_edit_dialog.dart';
 import '../../widgets/song_tile.dart';
 import '../player/standard_player_screen.dart';
 
 final librarySearchProvider = StateProvider<String>((ref) => '');
 final librarySortProvider = StateProvider<SongSortField>((ref) => SongSortField.title);
+final libraryShowHiddenProvider = StateProvider<bool>((ref) => false);
 
 final librarySongsProvider = StreamProvider.autoDispose<List<Song>>((ref) {
   final query = ref.watch(librarySearchProvider);
   final sortField = ref.watch(librarySortProvider);
+  final showHidden = ref.watch(libraryShowHiddenProvider);
   return ref.watch(songRepositoryProvider).watchAll(
         query: query,
         sortField: sortField,
+        includeHidden: showHidden,
       );
 });
 
@@ -25,18 +28,48 @@ final bookmarkedFoldersProvider =
   return ref.watch(folderRepositoryProvider).watchAll();
 });
 
-class LibraryScreen extends ConsumerWidget {
+enum _SongAction { edit, hide, unhide }
+
+class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LibraryScreen> createState() => _LibraryScreenState();
+}
+
+class _LibraryScreenState extends ConsumerState<LibraryScreen> {
+  bool _scanning = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scanDefaultLibrary());
+  }
+
+  Future<void> _scanDefaultLibrary() async {
+    setState(() => _scanning = true);
+    try {
+      await ref.read(musicLibraryScannerProvider).scan();
+    } finally {
+      if (mounted) setState(() => _scanning = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final songsAsync = ref.watch(librarySongsProvider);
-    final foldersAsync = ref.watch(bookmarkedFoldersProvider);
+    final showHidden = ref.watch(libraryShowHiddenProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Library'),
         actions: [
+          IconButton(
+            tooltip: showHidden ? 'Hide hidden songs' : 'Show hidden songs',
+            icon: Icon(showHidden ? Icons.visibility : Icons.visibility_off_outlined),
+            onPressed: () => ref.read(libraryShowHiddenProvider.notifier).state =
+                !showHidden,
+          ),
           PopupMenuButton<SongSortField>(
             icon: const Icon(Icons.sort),
             initialValue: ref.watch(librarySortProvider),
@@ -44,6 +77,17 @@ class LibraryScreen extends ConsumerWidget {
             itemBuilder: (context) => SongSortField.values
                 .map((f) => PopupMenuItem(value: f, child: Text(_sortLabel(f))))
                 .toList(),
+          ),
+          IconButton(
+            tooltip: 'Rescan Music folder',
+            icon: _scanning
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh),
+            onPressed: _scanning ? null : _scanDefaultLibrary,
           ),
         ],
       ),
@@ -61,51 +105,19 @@ class LibraryScreen extends ConsumerWidget {
               onChanged: (v) => ref.read(librarySearchProvider.notifier).state = v,
             ),
           ),
-          foldersAsync.when(
-            data: (folders) => folders.isEmpty
-                ? const SizedBox.shrink()
-                : SizedBox(
-                    height: 40,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      children: folders
-                          .map((f) => Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: InputChip(
-                                  avatar: const Icon(Icons.folder, size: 18),
-                                  label: Text(f.displayName),
-                                  onPressed: () =>
-                                      ref.read(folderRepositoryProvider).syncFolder(f.id),
-                                  onDeleted: () =>
-                                      ref.read(folderRepositoryProvider).delete(f.id),
-                                ),
-                              ))
-                          .toList(),
-                    ),
-                  ),
-            loading: () => const SizedBox.shrink(),
-            error: (_, _) => const SizedBox.shrink(),
-          ),
-          const Divider(height: 1),
           Expanded(
             child: songsAsync.when(
               data: (songs) => songs.isEmpty
-                  ? const Center(child: Text('No songs yet. Add a folder below.'))
+                  ? Center(
+                      child: Text(
+                        _scanning
+                            ? 'Scanning your Music folder...'
+                            : 'No songs found in your device\'s Music folder.',
+                      ),
+                    )
                   : ListView.builder(
                       itemCount: songs.length,
-                      itemBuilder: (context, i) => SongTile(
-                        song: songs[i],
-                        onEditBpm: (song) => showBpmEditDialog(context, ref, song),
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => StandardPlayerScreen(
-                              songs: songs,
-                              initialIndex: i,
-                            ),
-                          ),
-                        ),
-                      ),
+                      itemBuilder: (context, i) => _buildTile(context, songs, i),
                     ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error: $e')),
@@ -113,15 +125,47 @@ class LibraryScreen extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final id = await ref.read(folderRepositoryProvider).pickAndBookmarkFolder();
-          if (id == null) return;
-          ref.invalidate(bookmarkedFoldersProvider);
-          ref.invalidate(librarySongsProvider);
-        },
-        icon: const Icon(Icons.create_new_folder),
-        label: const Text('Add folder'),
+    );
+  }
+
+  Widget _buildTile(BuildContext context, List<Song> songs, int i) {
+    final song = songs[i];
+    final bpm = song.bpmManual ?? song.bpmDetected;
+    return SongTile(
+      song: song,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            bpm != null ? '${bpm.round()} BPM' : '-- BPM',
+            style: Theme.of(context).textTheme.labelMedium,
+          ),
+          PopupMenuButton<_SongAction>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (action) async {
+              switch (action) {
+                case _SongAction.edit:
+                  await showSongEditDialog(context, ref, song);
+                case _SongAction.hide:
+                  await ref.read(songRepositoryProvider).setHidden(song.id, true);
+                case _SongAction.unhide:
+                  await ref.read(songRepositoryProvider).setHidden(song.id, false);
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: _SongAction.edit, child: Text('Edit')),
+              if (song.isHidden)
+                const PopupMenuItem(value: _SongAction.unhide, child: Text('Unhide'))
+              else
+                const PopupMenuItem(value: _SongAction.hide, child: Text('Hide')),
+            ],
+          ),
+        ],
+      ),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => StandardPlayerScreen(songs: songs, initialIndex: i),
+        ),
       ),
     );
   }
