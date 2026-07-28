@@ -2,23 +2,23 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
 import '../../widgets/tempo_slider.dart';
+import 'now_playing_controller.dart';
 
-/// Plays a fixed queue of [songs] on demand, starting at [initialIndex].
-/// Used for ad-hoc playback of a single song, a whole playlist, or a
-/// bookmarked folder's contents - as opposed to [PracticeSessionScreen]'s
-/// structured, timed dance-set sequencing.
+/// Displays and controls the shared [nowPlayingProvider] queue. If [songs]
+/// is provided, starts (or replaces) that queue at [initialIndex] on open -
+/// used for ad-hoc playback of a single song, a whole playlist, or a
+/// bookmarked folder's contents. Opened with no arguments (e.g. by tapping
+/// the persistent mini-player), it just displays whatever is already
+/// playing. This is distinct from [PracticeSessionScreen]'s structured,
+/// timed dance-set sequencing, which owns the audio handler exclusively
+/// while active.
 class StandardPlayerScreen extends ConsumerStatefulWidget {
-  const StandardPlayerScreen({
-    super.key,
-    required this.songs,
-    this.initialIndex = 0,
-  });
+  const StandardPlayerScreen({super.key, this.songs, this.initialIndex = 0});
 
-  final List<Song> songs;
+  final List<Song>? songs;
   final int initialIndex;
 
   @override
@@ -26,62 +26,30 @@ class StandardPlayerScreen extends ConsumerStatefulWidget {
 }
 
 class _StandardPlayerScreenState extends ConsumerState<StandardPlayerScreen> {
-  late int _index;
-  int _tempoPercent = AppDefaults.tempoPercent;
-
   @override
   void initState() {
     super.initState();
-    _index = widget.initialIndex;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadCurrent());
-    ref.read(audioHandlerProvider).onTrackComplete = _playNext;
-  }
-
-  @override
-  void dispose() {
-    ref.read(audioHandlerProvider).onTrackComplete = null;
-    super.dispose();
-  }
-
-  Song get _currentSong => widget.songs[_index];
-
-  Future<void> _loadCurrent() async {
-    final handler = ref.read(audioHandlerProvider);
-    final song = _currentSong;
-    await handler.loadTrack(
-      uriOrPath: song.uri,
-      item: MediaItem(
-        id: song.id,
-        title: song.title,
-        artist: song.artist,
-        album: song.album,
-        duration: song.durationMs != null
-            ? Duration(milliseconds: song.durationMs!)
-            : null,
-      ),
-      tempoPercent: _tempoPercent.toDouble(),
-    );
-    await handler.play();
-  }
-
-  void _playNext() {
-    if (_index < widget.songs.length - 1) {
-      setState(() => _index++);
-      _loadCurrent();
-    }
-  }
-
-  void _playPrevious() {
-    if (_index > 0) {
-      setState(() => _index--);
-      _loadCurrent();
+    final songs = widget.songs;
+    if (songs != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(nowPlayingProvider.notifier).playQueue(songs, widget.initialIndex);
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final handler = ref.watch(audioHandlerProvider);
-    final song = _currentSong;
+    final nowPlaying = ref.watch(nowPlayingProvider);
+
+    if (nowPlaying == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Now Playing')),
+        body: const Center(child: Text('Nothing playing')),
+      );
+    }
+
+    final song = nowPlaying.currentSong;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Now Playing')),
@@ -127,11 +95,8 @@ class _StandardPlayerScreenState extends ConsumerState<StandardPlayerScreen> {
             ),
             const SizedBox(height: 16),
             TempoSlider(
-              percent: _tempoPercent,
-              onChanged: (p) {
-                setState(() => _tempoPercent = p);
-                handler.setTempoPercent(p.toDouble());
-              },
+              percent: nowPlaying.tempoPercent,
+              onChanged: (p) => ref.read(nowPlayingProvider.notifier).setTempo(p),
             ),
             const SizedBox(height: 24),
             Row(
@@ -140,7 +105,7 @@ class _StandardPlayerScreenState extends ConsumerState<StandardPlayerScreen> {
                 IconButton(
                   iconSize: 40,
                   icon: const Icon(Icons.skip_previous),
-                  onPressed: _index > 0 ? _playPrevious : null,
+                  onPressed: () => ref.read(nowPlayingProvider.notifier).previous(),
                 ),
                 StreamBuilder<PlaybackState>(
                   stream: handler.playbackState,
@@ -149,14 +114,17 @@ class _StandardPlayerScreenState extends ConsumerState<StandardPlayerScreen> {
                     return IconButton(
                       iconSize: 64,
                       icon: Icon(playing ? Icons.pause_circle : Icons.play_circle),
-                      onPressed: () => playing ? handler.pause() : handler.play(),
+                      onPressed: () =>
+                          ref.read(nowPlayingProvider.notifier).togglePlayPause(),
                     );
                   },
                 ),
                 IconButton(
                   iconSize: 40,
                   icon: const Icon(Icons.skip_next),
-                  onPressed: _index < widget.songs.length - 1 ? _playNext : null,
+                  onPressed: nowPlaying.hasNext
+                      ? () => ref.read(nowPlayingProvider.notifier).next()
+                      : null,
                 ),
               ],
             ),

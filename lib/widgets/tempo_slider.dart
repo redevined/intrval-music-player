@@ -32,6 +32,13 @@ class TempoSlider extends StatelessWidget {
           width: 48,
           child: Text('$percent%', textAlign: TextAlign.end),
         ),
+        IconButton(
+          tooltip: 'Reset tempo to ${AppDefaults.tempoPercent}%',
+          icon: const Icon(Icons.restart_alt),
+          onPressed: percent == AppDefaults.tempoPercent
+              ? null
+              : () => onChanged(AppDefaults.tempoPercent),
+        ),
       ],
     );
   }

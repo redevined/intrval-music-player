@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
+import 'now_playing_controller.dart';
 
 enum _SessionPhase { loading, playing, breaking, complete }
 
@@ -59,13 +60,14 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   @override
   void initState() {
     super.initState();
+    ref.read(nowPlayingProvider.notifier).clearSilently();
     ref.read(audioHandlerProvider).onTrackComplete = _onTrackNaturalEnd;
     _prepareSession();
   }
 
   @override
   void dispose() {
-    ref.read(audioHandlerProvider).onTrackComplete = null;
+    ref.read(nowPlayingProvider.notifier).attachTrackCompleteHandler();
     _cutoffTimer?.cancel();
     _breakTicker?.cancel();
     super.dispose();

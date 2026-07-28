@@ -28,6 +28,7 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
   void Function()? onTrackComplete;
 
   Stream<Duration> get positionStream => _player.positionStream;
+  Duration get position => _player.position;
   Duration? get duration => _player.duration;
   bool get isPlaying => _player.playing;
 

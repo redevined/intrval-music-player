@@ -6,6 +6,7 @@ import 'features/library/library_screen.dart';
 import 'features/playlists/playlist_list_screen.dart';
 import 'features/sets/set_list_screen.dart';
 import 'features/settings/settings_screen.dart';
+import 'widgets/mini_player.dart';
 
 class IntrvalApp extends ConsumerWidget {
   const IntrvalApp({super.key});
@@ -43,14 +44,20 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _index, children: _screens),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.library_music), label: 'Library'),
-          NavigationDestination(icon: Icon(Icons.queue_music), label: 'Playlists'),
-          NavigationDestination(icon: Icon(Icons.fitness_center), label: 'Sets'),
-          NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const MiniPlayer(),
+          NavigationBar(
+            selectedIndex: _index,
+            onDestinationSelected: (i) => setState(() => _index = i),
+            destinations: const [
+              NavigationDestination(icon: Icon(Icons.library_music), label: 'Library'),
+              NavigationDestination(icon: Icon(Icons.queue_music), label: 'Playlists'),
+              NavigationDestination(icon: Icon(Icons.fitness_center), label: 'Sets'),
+              NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
+            ],
+          ),
         ],
       ),
     );
