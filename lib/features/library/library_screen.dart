@@ -10,16 +10,19 @@ import '../player/standard_player_screen.dart';
 
 final librarySearchProvider = StateProvider<String>((ref) => '');
 final librarySortProvider = StateProvider<SongSortField>((ref) => SongSortField.title);
+final librarySortAscendingProvider = StateProvider<bool>((ref) => true);
 final libraryShowHiddenProvider = StateProvider<bool>((ref) => false);
 
 final librarySongsProvider = StreamProvider.autoDispose<List<Song>>((ref) {
   final query = ref.watch(librarySearchProvider);
   final sortField = ref.watch(librarySortProvider);
+  final ascending = ref.watch(librarySortAscendingProvider);
   final showHidden = ref.watch(libraryShowHiddenProvider);
   return ref.watch(songRepositoryProvider).watchAll(
         query: query,
         sortField: sortField,
-        includeHidden: showHidden,
+        ascending: ascending,
+        onlyHidden: showHidden,
       );
 });
 
@@ -65,10 +68,20 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         title: const Text('Library'),
         actions: [
           IconButton(
-            tooltip: showHidden ? 'Hide hidden songs' : 'Show hidden songs',
+            tooltip: showHidden ? 'Show all songs' : 'Show hidden songs only',
             icon: Icon(showHidden ? Icons.visibility : Icons.visibility_off_outlined),
             onPressed: () => ref.read(libraryShowHiddenProvider.notifier).state =
                 !showHidden,
+          ),
+          IconButton(
+            tooltip: ref.watch(librarySortAscendingProvider) ? 'Ascending' : 'Descending',
+            icon: Icon(
+              ref.watch(librarySortAscendingProvider)
+                  ? Icons.arrow_upward
+                  : Icons.arrow_downward,
+            ),
+            onPressed: () => ref.read(librarySortAscendingProvider.notifier).state =
+                !ref.read(librarySortAscendingProvider),
           ),
           PopupMenuButton<SongSortField>(
             icon: const Icon(Icons.sort),
@@ -77,17 +90,6 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             itemBuilder: (context) => SongSortField.values
                 .map((f) => PopupMenuItem(value: f, child: Text(_sortLabel(f))))
                 .toList(),
-          ),
-          IconButton(
-            tooltip: 'Rescan Music folder',
-            icon: _scanning
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.refresh),
-            onPressed: _scanning ? null : _scanDefaultLibrary,
           ),
         ],
       ),
@@ -112,7 +114,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                       child: Text(
                         _scanning
                             ? 'Scanning your Music folder...'
-                            : 'No songs found in your device\'s Music folder.',
+                            : showHidden
+                                ? 'No hidden songs.'
+                                : 'No songs found in your device\'s Music folder.',
                       ),
                     )
                   : ListView.builder(

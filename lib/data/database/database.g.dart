@@ -339,6 +339,7 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
   );
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
@@ -631,6 +632,10 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
 
 class Song extends DataClass implements Insertable<Song> {
   final String id;
+
+  /// Filesystem path or content:// URI this song was imported from. Unique
+  /// so the library scanner can safely re-run (including concurrently)
+  /// without ever creating duplicate rows for the same file.
   final String uri;
   final String title;
   final String? artist;

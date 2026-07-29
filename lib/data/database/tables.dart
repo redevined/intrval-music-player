@@ -5,7 +5,11 @@ import 'package:drift/drift.dart';
 /// from a bookmarked folder on Android scoped storage).
 class Songs extends Table {
   TextColumn get id => text()();
-  TextColumn get uri => text()();
+
+  /// Filesystem path or content:// URI this song was imported from. Unique
+  /// so the library scanner can safely re-run (including concurrently)
+  /// without ever creating duplicate rows for the same file.
+  TextColumn get uri => text().unique()();
   TextColumn get title => text()();
   TextColumn get artist => text().nullable()();
   TextColumn get album => text().nullable()();

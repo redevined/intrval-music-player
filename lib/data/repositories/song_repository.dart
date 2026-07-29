@@ -16,12 +16,10 @@ class SongRepository {
     double? maxBpm,
     SongSortField sortField = SongSortField.title,
     bool ascending = true,
-    bool includeHidden = false,
+    bool onlyHidden = false,
   }) {
     final select = _db.select(_db.songs);
-    if (!includeHidden) {
-      select.where((s) => s.isHidden.equals(false));
-    }
+    select.where((s) => s.isHidden.equals(onlyHidden));
     if (query != null && query.trim().isNotEmpty) {
       final like = '%${query.trim()}%';
       select.where((s) =>
@@ -59,6 +57,17 @@ class SongRepository {
       (_db.select(_db.songs)..where((s) => s.id.equals(id)))
           .getSingleOrNull();
 
+  /// Imports a song, or returns the existing song's id if [uri] was already
+  /// imported (e.g. by another source resolving to the same canonical
+  /// path - see [FolderRepository.syncFolder]). If the existing row isn't
+  /// yet attributed to a bookmarked folder and [sourceFolderId] is given,
+  /// it's backfilled so `songsForFolder` keeps reflecting this folder's
+  /// current contents even when its files were already in the library.
+  ///
+  /// Wrapped in a transaction (and backed by a UNIQUE(uri) constraint) so
+  /// this is safe to call concurrently - e.g. an overlapping double
+  /// invocation of the library scanner - without ever creating duplicate
+  /// rows for the same file.
   Future<String> importSong({
     required String uri,
     required String title,
@@ -67,21 +76,34 @@ class SongRepository {
     int? durationMs,
     String? artworkPath,
     String? sourceFolderId,
-  }) async {
-    final id = _uuid.v4();
-    await _db.into(_db.songs).insert(
-          SongsCompanion.insert(
-            id: id,
-            uri: uri,
-            title: title,
-            artist: Value(artist),
-            album: Value(album),
-            durationMs: Value(durationMs),
-            artworkPath: Value(artworkPath),
-            sourceFolderId: Value(sourceFolderId),
-          ),
-        );
-    return id;
+  }) {
+    return _db.transaction(() async {
+      final existing = await (_db.select(_db.songs)..where((s) => s.uri.equals(uri)))
+          .getSingleOrNull();
+      if (existing != null) {
+        if (sourceFolderId != null && existing.sourceFolderId == null) {
+          await (_db.update(_db.songs)..where((s) => s.id.equals(existing.id)))
+              .write(SongsCompanion(sourceFolderId: Value(sourceFolderId)));
+        }
+        return existing.id;
+      }
+
+      final id = _uuid.v4();
+      await _db.into(_db.songs).insert(
+            SongsCompanion.insert(
+              id: id,
+              uri: uri,
+              title: title,
+              artist: Value(artist),
+              album: Value(album),
+              durationMs: Value(durationMs),
+              artworkPath: Value(artworkPath),
+              sourceFolderId: Value(sourceFolderId),
+            ),
+            mode: InsertMode.insertOrIgnore,
+          );
+      return id;
+    });
   }
 
   Future<void> setDetectedBpm(String songId, double bpm) {

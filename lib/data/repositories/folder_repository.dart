@@ -52,6 +52,12 @@ class FolderRepository {
 
   /// Re-scans a bookmarked folder's contents via SAF and imports any audio
   /// files not already tracked as Songs for this folder.
+  ///
+  /// SAF URIs on the device's primary storage volume are resolved to their
+  /// plain filesystem path (the same representation the default Music
+  /// folder auto-scanner uses) before importing, so a folder that overlaps
+  /// with the auto-scanned library dedupes against it instead of creating
+  /// duplicate entries for the same file.
   Future<void> syncFolder(String folderId) async {
     final folder = await (_db.select(_db.bookmarkedFolders)
           ..where((f) => f.id.equals(folderId)))
@@ -65,11 +71,13 @@ class FolderRepository {
     for (final entry in entries) {
       if (entry.isDir) continue;
       if (!isAudioFileName(entry.name)) continue;
-      if (existingUris.contains(entry.uri)) continue;
+
+      final canonicalUri = _resolvePrimaryStoragePath(entry.uri) ?? entry.uri;
+      if (existingUris.contains(canonicalUri)) continue;
 
       final metadata = await _importService.extractMetadata(entry.uri);
       await _songRepository.importSong(
-        uri: entry.uri,
+        uri: canonicalUri,
         title: metadata.title,
         artist: metadata.artist,
         album: metadata.album,
@@ -78,4 +86,26 @@ class FolderRepository {
       );
     }
   }
+}
+
+/// If [contentUri] is a SAF document on the device's primary external
+/// storage volume, resolves it to the equivalent plain filesystem path
+/// (e.g. `/storage/emulated/0/Music/song.mp3`). Returns null for URIs on
+/// other volumes/providers (SD cards, cloud providers, etc.) where no
+/// direct path is available.
+String? _resolvePrimaryStoragePath(String contentUri) {
+  if (!contentUri.startsWith('content://com.android.externalstorage.documents/')) {
+    return null;
+  }
+  final segments = Uri.parse(contentUri).pathSegments;
+  final docIndex = segments.indexOf('document');
+  if (docIndex == -1 || docIndex + 1 >= segments.length) return null;
+
+  final docId = segments[docIndex + 1]; // e.g. "primary:Music/song.mp3"
+  final colonIndex = docId.indexOf(':');
+  if (colonIndex == -1) return null;
+
+  final volume = docId.substring(0, colonIndex);
+  if (volume != 'primary') return null;
+  return '/storage/emulated/0/${docId.substring(colonIndex + 1)}';
 }

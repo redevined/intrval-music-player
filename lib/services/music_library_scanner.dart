@@ -23,7 +23,15 @@ class MusicLibraryScanner {
   final FileImportService _importService;
   final BpmDetectionService _bpmService;
 
-  Future<void> scan() async {
+  Future<void>? _inFlight;
+
+  /// If a scan is already running, returns its Future instead of starting a
+  /// redundant second pass (metadata/BPM extraction is expensive, and while
+  /// [SongRepository.importSong] is safe to call concurrently, there's no
+  /// reason to do the extraction work twice for the same files).
+  Future<void> scan() => _inFlight ??= _doScan().whenComplete(() => _inFlight = null);
+
+  Future<void> _doScan() async {
     if (!await _ensurePermission()) return;
 
     final existingUris = await _songRepository.allUris();
