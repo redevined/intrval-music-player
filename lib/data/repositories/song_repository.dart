@@ -106,6 +106,12 @@ class SongRepository {
     });
   }
 
+  /// Songs that have never had a BPM analysis result stored. Drives the
+  /// library scanner's background BPM pass, so songs imported by any route
+  /// (default-root scan or bookmarked folder sync) eventually get analyzed.
+  Future<List<Song>> songsMissingBpm() =>
+      (_db.select(_db.songs)..where((s) => s.bpmDetected.isNull())).get();
+
   Future<void> setDetectedBpm(String songId, double bpm) {
     return (_db.update(_db.songs)..where((s) => s.id.equals(songId)))
         .write(SongsCompanion(bpmDetected: Value(bpm)));
