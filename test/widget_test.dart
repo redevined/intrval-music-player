@@ -6,6 +6,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:intrval_music_player/app.dart';
 import 'package:intrval_music_player/data/database/database.dart';
@@ -24,6 +25,9 @@ class _NoopMusicLibraryScanner implements MusicLibraryScanner {
 void main() {
   testWidgets('HomeShell renders all nav destinations and switches tabs',
       (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -32,6 +36,7 @@ void main() {
           ),
           audioHandlerProvider.overrideWithValue(AudioPlayerHandler()),
           musicLibraryScannerProvider.overrideWithValue(_NoopMusicLibraryScanner()),
+          sharedPreferencesProvider.overrideWithValue(prefs),
         ],
         child: const IntrvalApp(),
       ),

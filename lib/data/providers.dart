@@ -1,10 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/audio_player_service.dart';
 import '../services/bpm_detection_service.dart';
 import '../services/file_import_service.dart';
 import '../services/music_library_scanner.dart';
 import 'database/database.dart';
+import 'repositories/app_settings_repository.dart';
 import 'repositories/folder_repository.dart';
 import 'repositories/playlist_repository.dart';
 import 'repositories/practice_set_repository.dart';
@@ -15,10 +17,25 @@ final audioHandlerProvider = Provider<AudioPlayerHandler>((ref) {
   throw UnimplementedError('audioHandlerProvider must be overridden in main()');
 });
 
+/// Overridden in `main()` with the instance returned by
+/// `SharedPreferences.getInstance()`.
+final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
+  throw UnimplementedError('sharedPreferencesProvider must be overridden in main()');
+});
+
 final databaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
   ref.onDispose(db.close);
   return db;
+});
+
+final appSettingsRepositoryProvider = Provider<AppSettingsRepository>((ref) {
+  return AppSettingsRepository(ref.watch(sharedPreferencesProvider));
+});
+
+final setDefaultsProvider =
+    StateNotifierProvider<SetDefaultsController, SetDefaults>((ref) {
+  return SetDefaultsController(ref.watch(appSettingsRepositoryProvider));
 });
 
 final fileImportServiceProvider = Provider<FileImportService>((ref) {

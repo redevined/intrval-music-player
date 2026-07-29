@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 import '../database/database.dart';
+import 'app_settings_repository.dart';
 
 class PracticeSetRepository {
   PracticeSetRepository(this._db);
@@ -18,10 +19,42 @@ class PracticeSetRepository {
       (_db.select(_db.practiceSets)..where((s) => s.id.equals(id)))
           .getSingleOrNull();
 
-  Future<String> create(String name) async {
+  Stream<PracticeSet?> watchById(String id) =>
+      (_db.select(_db.practiceSets)..where((s) => s.id.equals(id)))
+          .watchSingleOrNull();
+
+  /// Creates a new practice set. If [defaults] is given (the user's
+  /// configured Settings > New set defaults), it seeds the set's default_*
+  /// columns explicitly; otherwise the table's hardcoded schema defaults
+  /// apply.
+  Future<String> create(String name, {SetDefaults? defaults}) async {
     final id = _uuid.v4();
     await _db.into(_db.practiceSets).insert(
-          PracticeSetsCompanion.insert(id: id, name: name),
+          PracticeSetsCompanion.insert(
+            id: id,
+            name: name,
+            defaultTempoPercent: defaults != null
+                ? Value(defaults.tempoPercent)
+                : const Value.absent(),
+            defaultPlayDurationSeconds: defaults != null
+                ? Value(defaults.playDurationSeconds)
+                : const Value.absent(),
+            defaultBreakSeconds: defaults != null
+                ? Value(defaults.breakSeconds)
+                : const Value.absent(),
+            defaultFadeOutSeconds: defaults != null
+                ? Value(defaults.fadeOutSeconds)
+                : const Value.absent(),
+            defaultBreakCueMode: defaults != null
+                ? Value(defaults.breakCueMode)
+                : const Value.absent(),
+            defaultBeepLeadSeconds: defaults != null
+                ? Value(defaults.beepLeadSeconds)
+                : const Value.absent(),
+            defaultAmbientSongId: defaults?.ambientSongId != null
+                ? Value(defaults!.ambientSongId)
+                : const Value.absent(),
+          ),
         );
     return id;
   }
