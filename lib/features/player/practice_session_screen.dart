@@ -21,6 +21,7 @@ class _ResolvedEntry {
     required this.fadeOutSeconds,
     required this.breakCueMode,
     required this.beepLeadSeconds,
+    required this.ambientSongId,
   });
 
   final SetEntry entry;
@@ -30,6 +31,7 @@ class _ResolvedEntry {
   final int fadeOutSeconds;
   final String breakCueMode;
   final int beepLeadSeconds;
+  final String? ambientSongId;
 }
 
 /// Runs a [PracticeSet] top to bottom: for each entry, picks a random
@@ -60,7 +62,13 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   @override
   void initState() {
     super.initState();
-    ref.read(nowPlayingProvider.notifier).clearSilently();
+    // Deferred: mutating nowPlayingProvider synchronously here would trigger
+    // a MiniPlayer rebuild while this screen is still being mounted by the
+    // Navigator, tripping a "setState()/markNeedsBuild() called during
+    // build" assertion.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(nowPlayingProvider.notifier).clearSilently();
+    });
     ref.read(audioHandlerProvider).onTrackComplete = _onTrackNaturalEnd;
     _prepareSession();
   }
@@ -97,6 +105,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       fadeOutSeconds: e.fadeOutSeconds ?? set.defaultFadeOutSeconds,
       breakCueMode: e.breakCueMode ?? set.defaultBreakCueMode,
       beepLeadSeconds: e.beepLeadSeconds ?? set.defaultBeepLeadSeconds,
+      ambientSongId: e.ambientSongId ?? set.defaultAmbientSongId,
     );
   }
 
@@ -135,18 +144,35 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
 
     _currentSong = song;
     final handler = ref.read(audioHandlerProvider);
-    await handler.loadTrack(
-      uriOrPath: song.uri,
-      item: MediaItem(
-        id: song.id,
-        title: song.title,
-        artist: song.artist,
-        album: song.album,
-        duration: song.durationMs != null ? Duration(milliseconds: song.durationMs!) : null,
-      ),
-      tempoPercent: resolved.tempoPercent.toDouble(),
-    );
-    await handler.play();
+    try {
+      await handler
+          .loadTrack(
+            uriOrPath: song.uri,
+            item: MediaItem(
+              id: song.id,
+              title: song.title,
+              artist: song.artist,
+              album: song.album,
+              duration:
+                  song.durationMs != null ? Duration(milliseconds: song.durationMs!) : null,
+            ),
+            tempoPercent: resolved.tempoPercent.toDouble(),
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (_) {
+      // Failed/stuck load (e.g. missing file, revoked permission, decode
+      // error) - don't leave the UI stuck on the loading spinner forever.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not play "${song.title}" - skipping.')),
+      );
+      _advance();
+      return;
+    }
+    // Note: just_audio's play() future does not resolve until playback
+    // stops/pauses/completes - awaiting it here would block the phase
+    // transition and cutoff-timer setup below for the entire song.
+    unawaited(handler.play());
 
     setState(() => _phase = _SessionPhase.playing);
 
@@ -175,17 +201,17 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     });
 
     if (resolved.breakCueMode == BreakCueMode.ambientSong &&
-        resolved.entry.ambientSongId != null) {
+        resolved.ambientSongId != null) {
       final ambient = await ref
           .read(songRepositoryProvider)
-          .getById(resolved.entry.ambientSongId!);
+          .getById(resolved.ambientSongId!);
       if (ambient != null) {
         final handler = ref.read(audioHandlerProvider);
         await handler.loadTrack(
           uriOrPath: ambient.uri,
           item: MediaItem(id: ambient.id, title: ambient.title),
         );
-        await handler.play();
+        unawaited(handler.play());
       }
     }
 

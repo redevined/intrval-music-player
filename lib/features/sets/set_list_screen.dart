@@ -6,8 +6,39 @@ import '../../data/providers.dart';
 import '../player/practice_session_screen.dart';
 import 'set_builder_screen.dart';
 
+enum SetSortField { name, dateCreated }
+
 final practiceSetsProvider = StreamProvider.autoDispose<List<PracticeSet>>((ref) {
   return ref.watch(practiceSetRepositoryProvider).watchAll();
+});
+
+final setSortProvider = StateProvider.autoDispose<SetSortField>((ref) => SetSortField.name);
+final setSortAscendingProvider = StateProvider.autoDispose<bool>((ref) => true);
+
+final visiblePracticeSetsProvider = Provider.autoDispose<AsyncValue<List<PracticeSet>>>((ref) {
+  final setsAsync = ref.watch(practiceSetsProvider);
+  final sortField = ref.watch(setSortProvider);
+  final ascending = ref.watch(setSortAscendingProvider);
+
+  return setsAsync.whenData((sets) {
+    var result = [...sets];
+    switch (sortField) {
+      case SetSortField.name:
+        result.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      case SetSortField.dateCreated:
+        result.sort((a, b) => a.dateCreated.compareTo(b.dateCreated));
+    }
+    if (!ascending) result = result.reversed.toList();
+    return result;
+  });
+});
+
+final _setEntryCountProvider =
+    StreamProvider.autoDispose.family<int, String>((ref, setId) {
+  return ref
+      .watch(practiceSetRepositoryProvider)
+      .watchEntries(setId)
+      .map((entries) => entries.length);
 });
 
 class SetListScreen extends ConsumerWidget {
@@ -15,10 +46,36 @@ class SetListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final setsAsync = ref.watch(practiceSetsProvider);
+    final setsAsync = ref.watch(visiblePracticeSetsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Practice Sets')),
+      appBar: AppBar(
+        title: const Text('Practice Sets'),
+        actions: [
+          IconButton(
+            tooltip: ref.watch(setSortAscendingProvider) ? 'Ascending' : 'Descending',
+            icon: Icon(
+              ref.watch(setSortAscendingProvider)
+                  ? Icons.arrow_upward
+                  : Icons.arrow_downward,
+            ),
+            onPressed: () => ref.read(setSortAscendingProvider.notifier).state =
+                !ref.read(setSortAscendingProvider),
+          ),
+          PopupMenuButton<SetSortField>(
+            icon: const Icon(Icons.sort),
+            initialValue: ref.watch(setSortProvider),
+            onSelected: (v) => ref.read(setSortProvider.notifier).state = v,
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: SetSortField.name, child: Text('Name')),
+              PopupMenuItem(
+                value: SetSortField.dateCreated,
+                child: Text('Date created'),
+              ),
+            ],
+          ),
+        ],
+      ),
       body: setsAsync.when(
         data: (sets) => sets.isEmpty
             ? const Center(child: Text('No practice sets yet.'))
@@ -27,8 +84,16 @@ class SetListScreen extends ConsumerWidget {
                 itemBuilder: (context, i) {
                   final set = sets[i];
                   return ListTile(
-                    leading: const Icon(Icons.fitness_center),
+                    leading: const Icon(Icons.timelapse),
                     title: Text(set.name),
+                    subtitle: Consumer(
+                      builder: (context, ref, _) {
+                        final count = ref.watch(_setEntryCountProvider(set.id)).valueOrNull;
+                        return Text(count == null
+                            ? ''
+                            : '$count ${count == 1 ? 'entry' : 'entries'}');
+                      },
+                    ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -107,7 +172,10 @@ class SetListScreen extends ConsumerWidget {
       ),
     );
     if (name != null && name.isNotEmpty) {
-      final id = await ref.read(practiceSetRepositoryProvider).create(name);
+      final defaults = ref.read(setDefaultsProvider);
+      final id = await ref
+          .read(practiceSetRepositoryProvider)
+          .create(name, defaults: defaults);
       if (context.mounted) {
         final set = await ref.read(practiceSetRepositoryProvider).getById(id);
         if (set != null && context.mounted) {

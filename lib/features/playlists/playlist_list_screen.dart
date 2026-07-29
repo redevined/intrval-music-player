@@ -14,6 +14,15 @@ final playlistsProvider = StreamProvider.autoDispose<List<Playlist>>((ref) {
 final playlistSearchProvider = StateProvider.autoDispose<String>((ref) => '');
 final playlistSortProvider =
     StateProvider.autoDispose<PlaylistSortField>((ref) => PlaylistSortField.name);
+final playlistSortAscendingProvider = StateProvider.autoDispose<bool>((ref) => true);
+
+final _playlistSongCountProvider =
+    StreamProvider.autoDispose.family<int, String>((ref, playlistId) {
+  return ref
+      .watch(playlistRepositoryProvider)
+      .watchSongs(playlistId)
+      .map((songs) => songs.length);
+});
 
 /// Applies the search/sort UI state on top of the raw playlist stream.
 /// Filtering/sorting happens client-side since the playlist count is small
@@ -22,6 +31,7 @@ final visiblePlaylistsProvider = Provider.autoDispose<AsyncValue<List<Playlist>>
   final playlistsAsync = ref.watch(playlistsProvider);
   final query = ref.watch(playlistSearchProvider).trim().toLowerCase();
   final sortField = ref.watch(playlistSortProvider);
+  final ascending = ref.watch(playlistSortAscendingProvider);
 
   return playlistsAsync.whenData((playlists) {
     var result = playlists;
@@ -33,8 +43,9 @@ final visiblePlaylistsProvider = Provider.autoDispose<AsyncValue<List<Playlist>>
       case PlaylistSortField.name:
         result.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
       case PlaylistSortField.dateCreated:
-        result.sort((a, b) => b.dateCreated.compareTo(a.dateCreated));
+        result.sort((a, b) => a.dateCreated.compareTo(b.dateCreated));
     }
+    if (!ascending) result = result.reversed.toList();
     return result;
   });
 });
@@ -52,6 +63,16 @@ class PlaylistListScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Playlists'),
         actions: [
+          IconButton(
+            tooltip: ref.watch(playlistSortAscendingProvider) ? 'Ascending' : 'Descending',
+            icon: Icon(
+              ref.watch(playlistSortAscendingProvider)
+                  ? Icons.arrow_upward
+                  : Icons.arrow_downward,
+            ),
+            onPressed: () => ref.read(playlistSortAscendingProvider.notifier).state =
+                !ref.read(playlistSortAscendingProvider),
+          ),
           PopupMenuButton<PlaylistSortField>(
             icon: const Icon(Icons.sort),
             initialValue: ref.watch(playlistSortProvider),
@@ -91,6 +112,16 @@ class PlaylistListScreen extends ConsumerWidget {
                         return ListTile(
                           leading: const Icon(Icons.queue_music),
                           title: Text(playlist.name),
+                          subtitle: Consumer(
+                            builder: (context, ref, _) {
+                              final count = ref
+                                  .watch(_playlistSongCountProvider(playlist.id))
+                                  .valueOrNull;
+                              return Text(count == null
+                                  ? ''
+                                  : '$count ${count == 1 ? 'song' : 'songs'}');
+                            },
+                          ),
                           trailing: PopupMenuButton<_PlaylistAction>(
                             icon: const Icon(Icons.more_vert),
                             onSelected: (action) async {

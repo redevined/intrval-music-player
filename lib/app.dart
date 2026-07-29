@@ -54,7 +54,7 @@ class _HomeShellState extends State<HomeShell> {
             destinations: const [
               NavigationDestination(icon: Icon(Icons.library_music), label: 'Library'),
               NavigationDestination(icon: Icon(Icons.queue_music), label: 'Playlists'),
-              NavigationDestination(icon: Icon(Icons.fitness_center), label: 'Sets'),
+              NavigationDestination(icon: Icon(Icons.timelapse), label: 'Sets'),
               NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
             ],
           ),

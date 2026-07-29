@@ -6,11 +6,17 @@ import '../../core/constants.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
 import '../library/library_screen.dart';
+import '../player/practice_session_screen.dart';
 import '../playlists/playlist_list_screen.dart';
 
 final _setEntriesProvider =
     StreamProvider.autoDispose.family<List<SetEntry>, String>((ref, setId) {
   return ref.watch(practiceSetRepositoryProvider).watchEntries(setId);
+});
+
+final _practiceSetByIdProvider =
+    StreamProvider.autoDispose.family<PracticeSet?, String>((ref, setId) {
+  return ref.watch(practiceSetRepositoryProvider).watchById(setId);
 });
 
 class SetBuilderScreen extends ConsumerWidget {
@@ -20,18 +26,23 @@ class SetBuilderScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch the live row instead of the (possibly stale) constructor value,
+    // so edits made via "Set defaults" are reflected immediately - both in
+    // this screen and in any practice session started from it.
+    final currentSet =
+        ref.watch(_practiceSetByIdProvider(practiceSet.id)).valueOrNull ?? practiceSet;
     final entriesAsync = ref.watch(_setEntriesProvider(practiceSet.id));
     final playlistsAsync = ref.watch(playlistsProvider);
     final foldersAsync = ref.watch(bookmarkedFoldersProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(practiceSet.name),
+        title: Text(currentSet.name),
         actions: [
           IconButton(
             icon: const Icon(Icons.tune),
             tooltip: 'Set defaults',
-            onPressed: () => _editDefaults(context, ref),
+            onPressed: () => _editDefaults(context, ref, currentSet),
           ),
         ],
       ),
@@ -90,25 +101,44 @@ class SetBuilderScreen extends ConsumerWidget {
               ids.insert(newIndex, id);
               ref
                   .read(practiceSetRepositoryProvider)
-                  .reorderEntries(practiceSet.id, ids);
+                  .reorderEntries(currentSet.id, ids);
             },
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _addEntry(context, ref),
-        child: const Icon(Icons.add),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton(
+            heroTag: 'set-play-fab',
+            tooltip: 'Start practice session',
+            onPressed: (entriesAsync.valueOrNull ?? const []).isEmpty
+                ? null
+                : () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => PracticeSessionScreen(practiceSet: currentSet),
+                      ),
+                    ),
+            child: const Icon(Icons.play_arrow),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton(
+            heroTag: 'set-add-fab',
+            onPressed: () => _addEntry(context, ref, currentSet),
+            child: const Icon(Icons.add),
+          ),
+        ],
       ),
     );
   }
 
-  Future<void> _addEntry(BuildContext context, WidgetRef ref) async {
+  Future<void> _addEntry(BuildContext context, WidgetRef ref, PracticeSet currentSet) async {
     final source = await _pickSource(context, ref);
     if (source == null) return;
     await ref.read(practiceSetRepositoryProvider).addEntry(
-          practiceSet.id,
+          currentSet.id,
           label: source.label,
           playlistId: source.playlistId,
         );
@@ -202,11 +232,11 @@ class SetBuilderScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _editDefaults(BuildContext context, WidgetRef ref) async {
-    var tempo = practiceSet.defaultTempoPercent;
-    var play = practiceSet.defaultPlayDurationSeconds;
-    var brk = practiceSet.defaultBreakSeconds;
-    var fade = practiceSet.defaultFadeOutSeconds;
+  Future<void> _editDefaults(BuildContext context, WidgetRef ref, PracticeSet currentSet) async {
+    var tempo = currentSet.defaultTempoPercent;
+    var play = currentSet.defaultPlayDurationSeconds;
+    var brk = currentSet.defaultBreakSeconds;
+    var fade = currentSet.defaultFadeOutSeconds;
 
     await showDialog<void>(
       context: context,
@@ -259,7 +289,7 @@ class SetBuilderScreen extends ConsumerWidget {
             FilledButton(
               onPressed: () async {
                 await ref.read(practiceSetRepositoryProvider).update(
-                      practiceSet.id,
+                      currentSet.id,
                       PracticeSetsCompanion(
                         defaultTempoPercent: Value(tempo),
                         defaultPlayDurationSeconds: Value(play),

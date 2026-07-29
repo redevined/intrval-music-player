@@ -145,9 +145,29 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _addSongs(context),
-        child: const Icon(Icons.add),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton(
+            heroTag: 'playlist-play-fab',
+            tooltip: 'Play playlist',
+            onPressed: (songsAsync.valueOrNull ?? const []).isEmpty
+                ? null
+                : () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            StandardPlayerScreen(songs: songsAsync.valueOrNull!),
+                      ),
+                    ),
+            child: const Icon(Icons.play_arrow),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton(
+            heroTag: 'playlist-add-fab',
+            onPressed: () => _addSongs(context),
+            child: const Icon(Icons.add),
+          ),
+        ],
       ),
     );
   }
@@ -240,6 +260,10 @@ class _AddSongsSheetState extends ConsumerState<_AddSongsSheet> {
   @override
   Widget build(BuildContext context) {
     final songsAsync = ref.watch(librarySongsProvider);
+    final addedIds = (ref.watch(_playlistSongsProvider(widget.playlistId)).valueOrNull ??
+            const <Song>[])
+        .map((s) => s.id)
+        .toSet();
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.7,
@@ -263,10 +287,16 @@ class _AddSongsSheetState extends ConsumerState<_AddSongsSheet> {
             for (var i = 0; i < songs.length; i++)
               SongTile(
                 song: songs[i],
-                trailing: const Icon(Icons.add_circle_outline),
-                onTap: () => ref
-                    .read(playlistRepositoryProvider)
-                    .addSong(widget.playlistId, songs[i].id),
+                trailing: addedIds.contains(songs[i].id)
+                    ? Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary)
+                    : const Icon(Icons.add_circle_outline),
+                onTap: addedIds.contains(songs[i].id)
+                    ? () => ref
+                        .read(playlistRepositoryProvider)
+                        .removeSong(widget.playlistId, songs[i].id)
+                    : () => ref
+                        .read(playlistRepositoryProvider)
+                        .addSong(widget.playlistId, songs[i].id),
               ),
           ],
         ),

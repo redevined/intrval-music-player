@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -77,7 +79,9 @@ class NowPlayingController extends StateNotifier<NowPlayingState?> {
       ),
       tempoPercent: s.tempoPercent.toDouble(),
     );
-    await handler.play();
+    // just_audio's play() future does not resolve until playback
+    // stops/pauses/completes - must not be awaited here.
+    unawaited(handler.play());
   }
 
   void _onTrackComplete() {
@@ -118,7 +122,7 @@ class NowPlayingController extends StateNotifier<NowPlayingState?> {
     if (handler.isPlaying) {
       await handler.pause();
     } else {
-      await handler.play();
+      unawaited(handler.play());
     }
   }
 
