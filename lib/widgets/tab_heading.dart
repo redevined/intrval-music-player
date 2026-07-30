@@ -14,9 +14,10 @@ class TabHeading extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
+          padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Theme.of(context).colorScheme.primary, width: 1.5),
+            color: Theme.of(context).colorScheme.primary,
+            shape: BoxShape.circle,
           ),
           child: Image.asset('assets/app_icon_rounded.png', width: 32, height: 32),
         ),
