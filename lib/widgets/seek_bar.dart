@@ -25,8 +25,11 @@ class SeekBar extends StatefulWidget {
 
   /// Optional marker drawn on the track at this position - the point where
   /// playback will be cut off (e.g. a practice set entry's play-duration
-  /// limit). Recompute this from the caller on every tick so it tracks a
-  /// seek instead of staying pinned to the original position.
+  /// limit). The caller should only update this in response to a seek (or
+  /// a new song starting), not on every position tick - the cutoff is
+  /// time-based rather than position-based, so its on-track position
+  /// otherwise never moves and recomputing it every tick just makes it
+  /// wiggle.
   final Duration? stopAt;
 
   @override

@@ -29,6 +29,14 @@ class PracticeSessionScreen extends ConsumerStatefulWidget {
 }
 
 class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
+  // The stop-point marker is derived from position + cutoffRemainingSeconds,
+  // but those two values tick down on independent schedules (a continuous
+  // position stream vs. a once-a-second timer), so recomputing it on every
+  // tick makes it visibly wiggle by about a second. It only actually needs
+  // to move when the user seeks, so it's anchored once per playback instead.
+  Duration? _stopAt;
+  bool _stopAtAnchored = false;
+
   @override
   void initState() {
     super.initState();
@@ -76,6 +84,17 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     final breaking = session.phase == SessionPhase.breaking;
     final loading = session.phase == SessionPhase.loading;
 
+    if (session.phase != SessionPhase.playing) {
+      _stopAtAnchored = false;
+      _stopAt = null;
+    } else if (!_stopAtAnchored) {
+      _stopAtAnchored = true;
+      final cutoffRemaining = session.cutoffRemainingSeconds;
+      _stopAt = cutoffRemaining == null
+          ? null
+          : handler.position + Duration(seconds: cutoffRemaining);
+    }
+
     return PlayerShell(
       appBarTitle: session.practiceSet.name,
       appBarActions: [
@@ -118,14 +137,22 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
               builder: (context, snapshot) {
                 final position = snapshot.data ?? Duration.zero;
                 final duration = handler.duration ?? Duration.zero;
-                final cutoffRemaining = session.cutoffRemainingSeconds;
-                final stopAt = cutoffRemaining == null
-                    ? null
-                    : position + Duration(seconds: cutoffRemaining);
+                final stopAt = _stopAt;
                 return SeekBar(
                   position: position,
                   duration: duration,
-                  onSeek: handler.seek,
+                  onSeek: (target) {
+                    // The cutoff is time-based, not position-based, so
+                    // seeking shifts the marker by the same amount without
+                    // otherwise affecting the countdown.
+                    final cutoffRemaining = session.cutoffRemainingSeconds;
+                    handler.seek(target);
+                    setState(() {
+                      _stopAt = cutoffRemaining == null
+                          ? null
+                          : target + Duration(seconds: cutoffRemaining);
+                    });
+                  },
                   // Only worth showing if the cutoff would actually fire
                   // before the song ends naturally on its own.
                   stopAt: stopAt != null && duration > Duration.zero && stopAt < duration
