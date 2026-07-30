@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:saf/saf.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants.dart';
+import '../../services/file_import_service.dart';
 import '../database/database.dart' show BreakCueMode;
 
 /// Global defaults applied when creating a new practice set. Each set (and
@@ -47,11 +49,12 @@ class SetDefaults {
   }
 }
 
-/// Persists app-wide settings (currently just the new-set defaults) to
+/// Persists app-wide settings (new-set defaults, music root folder) to
 /// [SharedPreferences] so they survive app restarts.
 class AppSettingsRepository {
   AppSettingsRepository(this._prefs);
   final SharedPreferences _prefs;
+  final _saf = Saf();
 
   static const _kTempo = 'default_tempo_percent';
   static const _kPlay = 'default_play_duration_seconds';
@@ -60,6 +63,23 @@ class AppSettingsRepository {
   static const _kBreakCueMode = 'default_break_cue_mode';
   static const _kBeepLead = 'default_beep_lead_seconds';
   static const _kAmbientSongId = 'default_ambient_song_id';
+  static const _kMusicRootFolder = 'music_root_folder';
+
+  String get musicRootFolder =>
+      _prefs.getString(_kMusicRootFolder) ?? AppDefaults.musicRootFolder;
+
+  Future<void> saveMusicRootFolder(String path) =>
+      _prefs.setString(_kMusicRootFolder, path);
+
+  /// Opens the system directory picker and resolves the result to a plain
+  /// filesystem path so [MusicLibraryScanner] can scan it directly. Returns
+  /// null if the user cancelled, or if the picked folder isn't on the
+  /// device's primary storage volume (no direct path available there).
+  Future<String?> pickMusicRootFolder() async {
+    final dir = await _saf.pickDirectory();
+    if (dir == null) return null;
+    return resolvePrimaryStoragePath(dir.uri);
+  }
 
   SetDefaults get setDefaults => SetDefaults(
         tempoPercent: _prefs.getInt(_kTempo) ?? AppDefaults.tempoPercent,
@@ -95,5 +115,15 @@ class SetDefaultsController extends StateNotifier<SetDefaults> {
   Future<void> update(SetDefaults defaults) async {
     state = defaults;
     await _repo.saveSetDefaults(defaults);
+  }
+}
+
+class MusicRootFolderController extends StateNotifier<String> {
+  MusicRootFolderController(this._repo) : super(_repo.musicRootFolder);
+  final AppSettingsRepository _repo;
+
+  Future<void> update(String path) async {
+    state = path;
+    await _repo.saveMusicRootFolder(path);
   }
 }

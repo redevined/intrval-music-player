@@ -3,15 +3,17 @@ import 'dart:io';
 
 import 'package:permission_handler/permission_handler.dart';
 
+import '../core/constants.dart';
 import '../data/repositories/song_repository.dart';
 import 'bpm_detection_service.dart';
 import 'file_import_service.dart';
 
-/// Default OS directories auto-scanned for music, without requiring the
-/// user to explicitly pick a folder via SAF. This is the Library's primary
-/// song source; bookmarked (SAF-picked) folders remain a separate,
-/// explicit opt-in used from Playlists.
-const defaultLibraryRoots = ['/storage/emulated/0/Music'];
+/// Default OS directory auto-scanned for music, without requiring the user
+/// to explicitly pick a folder via SAF. This is the Library's primary song
+/// source; bookmarked (SAF-picked) folders remain a separate, explicit
+/// opt-in used from Playlists. Overridable in Settings - see
+/// [AppSettingsRepository.musicRootFolder].
+const defaultLibraryRoots = [AppDefaults.musicRootFolder];
 
 /// Scans [defaultLibraryRoots] for audio files not yet imported and imports
 /// them. Safe to call repeatedly - already-imported files (matched by their

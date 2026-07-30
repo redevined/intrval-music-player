@@ -34,6 +34,28 @@ const _audioExtensions = {
 bool isAudioFileName(String name) =>
     _audioExtensions.contains(p.extension(name).toLowerCase());
 
+/// If [contentUri] is a SAF document on the device's primary external
+/// storage volume, resolves it to the equivalent plain filesystem path
+/// (e.g. `/storage/emulated/0/Music/song.mp3`). Returns null for URIs on
+/// other volumes/providers (SD cards, cloud providers, etc.) where no
+/// direct path is available.
+String? resolvePrimaryStoragePath(String contentUri) {
+  if (!contentUri.startsWith('content://com.android.externalstorage.documents/')) {
+    return null;
+  }
+  final segments = Uri.parse(contentUri).pathSegments;
+  final docIndex = segments.indexOf('document');
+  if (docIndex == -1 || docIndex + 1 >= segments.length) return null;
+
+  final docId = segments[docIndex + 1]; // e.g. "primary:Music/song.mp3"
+  final colonIndex = docId.indexOf(':');
+  if (colonIndex == -1) return null;
+
+  final volume = docId.substring(0, colonIndex);
+  if (volume != 'primary') return null;
+  return '/storage/emulated/0/${docId.substring(colonIndex + 1)}';
+}
+
 /// Handles reading tag metadata for both local file paths and SAF
 /// `content://` URIs (by staging the latter to a temp local file first,
 /// since the underlying tag-reading native code needs a real path).

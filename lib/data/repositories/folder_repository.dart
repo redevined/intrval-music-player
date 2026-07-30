@@ -72,7 +72,7 @@ class FolderRepository {
       if (entry.isDir) continue;
       if (!isAudioFileName(entry.name)) continue;
 
-      final canonicalUri = _resolvePrimaryStoragePath(entry.uri) ?? entry.uri;
+      final canonicalUri = resolvePrimaryStoragePath(entry.uri) ?? entry.uri;
       if (existingUris.contains(canonicalUri)) continue;
 
       final metadata = await _importService.extractMetadata(entry.uri);
@@ -86,26 +86,4 @@ class FolderRepository {
       );
     }
   }
-}
-
-/// If [contentUri] is a SAF document on the device's primary external
-/// storage volume, resolves it to the equivalent plain filesystem path
-/// (e.g. `/storage/emulated/0/Music/song.mp3`). Returns null for URIs on
-/// other volumes/providers (SD cards, cloud providers, etc.) where no
-/// direct path is available.
-String? _resolvePrimaryStoragePath(String contentUri) {
-  if (!contentUri.startsWith('content://com.android.externalstorage.documents/')) {
-    return null;
-  }
-  final segments = Uri.parse(contentUri).pathSegments;
-  final docIndex = segments.indexOf('document');
-  if (docIndex == -1 || docIndex + 1 >= segments.length) return null;
-
-  final docId = segments[docIndex + 1]; // e.g. "primary:Music/song.mp3"
-  final colonIndex = docId.indexOf(':');
-  if (colonIndex == -1) return null;
-
-  final volume = docId.substring(0, colonIndex);
-  if (volume != 'primary') return null;
-  return '/storage/emulated/0/${docId.substring(colonIndex + 1)}';
 }

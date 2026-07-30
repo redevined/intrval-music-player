@@ -38,6 +38,11 @@ final setDefaultsProvider =
   return SetDefaultsController(ref.watch(appSettingsRepositoryProvider));
 });
 
+final musicRootFolderProvider =
+    StateNotifierProvider<MusicRootFolderController, String>((ref) {
+  return MusicRootFolderController(ref.watch(appSettingsRepositoryProvider));
+});
+
 final fileImportServiceProvider = Provider<FileImportService>((ref) {
   return FileImportService();
 });
@@ -71,5 +76,6 @@ final musicLibraryScannerProvider = Provider<MusicLibraryScanner>((ref) {
     ref.watch(songRepositoryProvider),
     ref.watch(fileImportServiceProvider),
     ref.watch(bpmDetectionServiceProvider),
+    roots: [ref.watch(musicRootFolderProvider)],
   );
 });

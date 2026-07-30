@@ -12,18 +12,15 @@ import '../player/standard_player_screen.dart';
 final librarySearchProvider = StateProvider<String>((ref) => '');
 final librarySortProvider = StateProvider<SongSortField>((ref) => SongSortField.title);
 final librarySortAscendingProvider = StateProvider<bool>((ref) => true);
-final libraryShowHiddenProvider = StateProvider<bool>((ref) => false);
 
 final librarySongsProvider = StreamProvider.autoDispose<List<Song>>((ref) {
   final query = ref.watch(librarySearchProvider);
   final sortField = ref.watch(librarySortProvider);
   final ascending = ref.watch(librarySortAscendingProvider);
-  final showHidden = ref.watch(libraryShowHiddenProvider);
   return ref.watch(songRepositoryProvider).watchAll(
         query: query,
         sortField: sortField,
         ascending: ascending,
-        onlyHidden: showHidden,
       );
 });
 
@@ -32,7 +29,7 @@ final bookmarkedFoldersProvider =
   return ref.watch(folderRepositoryProvider).watchAll();
 });
 
-enum _SongAction { edit, hide, unhide }
+enum _SongAction { edit, hide }
 
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
@@ -62,18 +59,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   @override
   Widget build(BuildContext context) {
     final songsAsync = ref.watch(librarySongsProvider);
-    final showHidden = ref.watch(libraryShowHiddenProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const TabHeading('Library'),
         actions: [
-          IconButton(
-            tooltip: showHidden ? 'Show all songs' : 'Show hidden songs only',
-            icon: Icon(showHidden ? Icons.visibility : Icons.visibility_off_outlined),
-            onPressed: () => ref.read(libraryShowHiddenProvider.notifier).state =
-                !showHidden,
-          ),
           IconButton(
             tooltip: ref.watch(librarySortAscendingProvider) ? 'Ascending' : 'Descending',
             icon: Icon(
@@ -113,9 +103,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                       child: Text(
                         _scanning
                             ? 'Scanning your Music folder...'
-                            : showHidden
-                                ? 'No hidden songs.'
-                                : 'No songs found in your device\'s Music folder.',
+                            : 'No songs found in your device\'s Music folder.',
                       ),
                     )
                   : ListView.builder(
@@ -153,16 +141,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   await showSongEditDialog(context, ref, song);
                 case _SongAction.hide:
                   await ref.read(songRepositoryProvider).setHidden(song.id, true);
-                case _SongAction.unhide:
-                  await ref.read(songRepositoryProvider).setHidden(song.id, false);
               }
             },
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: _SongAction.edit, child: Text('Edit')),
-              if (song.isHidden)
-                const PopupMenuItem(value: _SongAction.unhide, child: Text('Unhide'))
-              else
-                const PopupMenuItem(value: _SongAction.hide, child: Text('Hide')),
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: _SongAction.edit, child: Text('Edit')),
+              PopupMenuItem(value: _SongAction.hide, child: Text('Hide')),
             ],
           ),
         ],

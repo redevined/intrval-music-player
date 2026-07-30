@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +9,19 @@ import '../../data/providers.dart';
 import '../../data/repositories/app_settings_repository.dart';
 import '../../widgets/tab_heading.dart';
 import '../library/library_screen.dart' show librarySongsProvider;
+import 'hidden_songs_screen.dart';
+
+final _ambientSongProvider =
+    FutureProvider.autoDispose.family<Song?, String>((ref, id) {
+  return ref.watch(songRepositoryProvider).getById(id);
+});
+
+final _hiddenSongCountProvider = StreamProvider.autoDispose<int>((ref) {
+  return ref
+      .watch(songRepositoryProvider)
+      .watchAll(onlyHidden: true)
+      .map((songs) => songs.length);
+});
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -17,6 +32,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _scanning = false;
+  bool _pickingFolder = false;
 
   Future<void> _rescanLibrary() async {
     setState(() => _scanning = true);
@@ -32,76 +48,64 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final defaults = ref.watch(setDefaultsProvider);
-
-    return Scaffold(
-      appBar: AppBar(title: const TabHeading('Settings')),
-      body: ListView(
-        children: [
-          ListTile(
-            title: const Text('New set defaults'),
-            subtitle: Text(_summarize(defaults)),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _editSetDefaults(context, ref, defaults),
-          ),
-          const Divider(),
-          ListTile(
-            leading: _scanning
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.refresh),
-            title: const Text('Rescan Music folder'),
-            subtitle: const Text('Imports any new songs added to your device\'s Music folder'),
-            onTap: _scanning ? null : _rescanLibrary,
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.delete_forever, color: Colors.red),
-            title: const Text('Clear all app data'),
-            subtitle: const Text(
-              'Deletes all imported songs, playlists, and practice sets',
+  Future<void> _pickRootFolder() async {
+    setState(() => _pickingFolder = true);
+    try {
+      final path = await ref.read(appSettingsRepositoryProvider).pickMusicRootFolder();
+      if (path == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Couldn't use that folder - pick one on this device's main storage.",
+              ),
             ),
-            onTap: () => _confirmClearData(context, ref),
-          ),
-          const Divider(),
-          const AboutListTile(
-            applicationName: 'intrval',
-            applicationVersion: '1.0.0',
-            aboutBoxChildren: [
-              Text('A tempo-controlled practice-set music player for dancers.'),
-            ],
-          ),
-        ],
+          );
+        }
+        return;
+      }
+      await ref.read(musicRootFolderProvider.notifier).update(path);
+      await _rescanLibrary();
+    } finally {
+      if (mounted) setState(() => _pickingFolder = false);
+    }
+  }
+
+  void _updateDefaults(SetDefaults updated) {
+    unawaited(ref.read(setDefaultsProvider.notifier).update(updated));
+  }
+
+  Future<void> _pickAmbientSong(SetDefaults defaults) async {
+    final song = await showModalBottomSheet<Song>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.7,
+        builder: (context, scrollController) => Consumer(
+          builder: (context, ref, _) {
+            final songsAsync = ref.watch(librarySongsProvider);
+            return songsAsync.when(
+              data: (songs) => songs.isEmpty
+                  ? const Center(child: Text('No songs in your library yet.'))
+                  : ListView.builder(
+                      controller: scrollController,
+                      itemCount: songs.length,
+                      itemBuilder: (context, i) => ListTile(
+                        title: Text(songs[i].title),
+                        subtitle: songs[i].artist != null ? Text(songs[i].artist!) : null,
+                        onTap: () => Navigator.of(context).pop(songs[i]),
+                      ),
+                    ),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Error: $e')),
+            );
+          },
+        ),
       ),
     );
-  }
-
-  String _summarize(SetDefaults d) {
-    final play = '${d.playDurationSeconds ~/ 60}:${(d.playDurationSeconds % 60).toString().padLeft(2, '0')}';
-    final cue = switch (d.breakCueMode) {
-      BreakCueMode.beepBeforeEnd => 'beep cue',
-      BreakCueMode.ambientSong => 'break track',
-      _ => 'silence',
-    };
-    return '$play play \u2022 ${d.breakSeconds}s break ($cue) \u2022 ${d.tempoPercent}% tempo';
-  }
-
-  Future<void> _editSetDefaults(
-    BuildContext context,
-    WidgetRef ref,
-    SetDefaults current,
-  ) async {
-    final result = await showDialog<SetDefaults>(
-      context: context,
-      builder: (context) => _SetDefaultsDialog(initial: current),
-    );
-    if (result != null) {
-      await ref.read(setDefaultsProvider.notifier).update(result);
+    if (song != null) {
+      _updateDefaults(defaults.copyWith(ambientSongId: song.id));
     }
   }
 
@@ -137,184 +141,226 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       }
     }
   }
-}
-
-class _SetDefaultsDialog extends ConsumerStatefulWidget {
-  const _SetDefaultsDialog({required this.initial});
-  final SetDefaults initial;
-
-  @override
-  ConsumerState<_SetDefaultsDialog> createState() => _SetDefaultsDialogState();
-}
-
-class _SetDefaultsDialogState extends ConsumerState<_SetDefaultsDialog> {
-  late int _tempo = widget.initial.tempoPercent;
-  late int _play = widget.initial.playDurationSeconds;
-  late int _brk = widget.initial.breakSeconds;
-  late int _fade = widget.initial.fadeOutSeconds;
-  late String _breakCueMode = widget.initial.breakCueMode;
-  late int _beepLead = widget.initial.beepLeadSeconds;
-  String? _ambientSongId;
-  Song? _ambientSong;
-
-  @override
-  void initState() {
-    super.initState();
-    _ambientSongId = widget.initial.ambientSongId;
-    if (_ambientSongId != null) _loadAmbientSong(_ambientSongId!);
-  }
-
-  Future<void> _loadAmbientSong(String id) async {
-    final song = await ref.read(songRepositoryProvider).getById(id);
-    if (mounted) setState(() => _ambientSong = song);
-  }
-
-  Future<void> _pickAmbientSong() async {
-    final song = await showModalBottomSheet<Song>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.7,
-        builder: (context, scrollController) => Consumer(
-          builder: (context, ref, _) {
-            final songsAsync = ref.watch(librarySongsProvider);
-            return songsAsync.when(
-              data: (songs) => songs.isEmpty
-                  ? const Center(child: Text('No songs in your library yet.'))
-                  : ListView.builder(
-                      controller: scrollController,
-                      itemCount: songs.length,
-                      itemBuilder: (context, i) => ListTile(
-                        leading: const Icon(Icons.music_note),
-                        title: Text(songs[i].title),
-                        subtitle: songs[i].artist != null ? Text(songs[i].artist!) : null,
-                        onTap: () => Navigator.of(context).pop(songs[i]),
-                      ),
-                    ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
-            );
-          },
-        ),
-      ),
-    );
-    if (song != null) {
-      setState(() {
-        _ambientSongId = song.id;
-        _ambientSong = song;
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('New set defaults'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Tempo: $_tempo%'),
-            Slider(
-              value: _tempo.toDouble(),
-              min: TempoLimits.minPercent.toDouble(),
-              max: TempoLimits.maxPercent.toDouble(),
-              divisions: TempoLimits.maxPercent - TempoLimits.minPercent,
-              onChanged: (v) => setState(() => _tempo = v.round()),
-            ),
-            Text('Play duration: ${_play}s'),
-            Slider(
-              value: _play.toDouble(),
-              min: 15,
-              max: 300,
-              divisions: 57,
-              onChanged: (v) => setState(() => _play = v.round()),
-            ),
-            Text('Break: ${_brk}s'),
-            Slider(
-              value: _brk.toDouble(),
-              min: 0,
-              max: 120,
-              divisions: 24,
-              onChanged: (v) => setState(() => _brk = v.round()),
-            ),
-            Text('Fade-out at cutoff: ${_fade}s'),
-            Slider(
-              value: _fade.toDouble(),
-              min: 0,
-              max: 10,
-              divisions: 10,
-              onChanged: (v) => setState(() => _fade = v.round()),
-            ),
-            const SizedBox(height: 12),
-            const Text('Break cue', style: TextStyle(fontWeight: FontWeight.bold)),
-            RadioGroup<String>(
-              groupValue: _breakCueMode,
-              onChanged: (v) => setState(() => _breakCueMode = v!),
-              child: Column(
-                children: const [
-                  RadioListTile<String>(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('Silence'),
-                    value: BreakCueMode.silence,
-                  ),
-                  RadioListTile<String>(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('Silence + beeps before next song'),
-                    value: BreakCueMode.beepBeforeEnd,
-                  ),
-                  RadioListTile<String>(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('Break audio track'),
-                    value: BreakCueMode.ambientSong,
-                  ),
-                ],
-              ),
-            ),
-            if (_breakCueMode == BreakCueMode.beepBeforeEnd) ...[
-              Text('Beep lead time: ${_beepLead}s before next song'),
-              Slider(
-                value: _beepLead.toDouble().clamp(0, _brk.toDouble()),
-                min: 0,
-                max: _brk.toDouble().clamp(1, double.infinity),
-                divisions: _brk.clamp(1, 999),
-                onChanged: (v) => setState(() => _beepLead = v.round()),
-              ),
-            ],
-            if (_breakCueMode == BreakCueMode.ambientSong)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.music_note),
-                title: Text(_ambientSong?.title ?? 'Choose a track'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: _pickAmbientSong,
-              ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(
-            SetDefaults(
-              tempoPercent: _tempo,
-              playDurationSeconds: _play,
-              breakSeconds: _brk,
-              fadeOutSeconds: _fade,
-              breakCueMode: _breakCueMode,
-              beepLeadSeconds: _beepLead,
-              ambientSongId:
-                  _breakCueMode == BreakCueMode.ambientSong ? _ambientSongId : null,
+    final defaults = ref.watch(setDefaultsProvider);
+    final rootFolder = ref.watch(musicRootFolderProvider);
+    final hiddenCount = ref.watch(_hiddenSongCountProvider).valueOrNull;
+
+    return Scaffold(
+      appBar: AppBar(title: const TabHeading('Settings')),
+      body: ListView(
+        children: [
+          const _SectionHeader('New set defaults'),
+          _SliderSetting(
+            label: 'Tempo',
+            valueLabel: '${defaults.tempoPercent}%',
+            value: defaults.tempoPercent.toDouble(),
+            min: TempoLimits.minPercent.toDouble(),
+            max: TempoLimits.maxPercent.toDouble(),
+            divisions: TempoLimits.maxPercent - TempoLimits.minPercent,
+            onChanged: (v) => _updateDefaults(defaults.copyWith(tempoPercent: v.round())),
+          ),
+          _SliderSetting(
+            label: 'Play duration',
+            valueLabel: '${defaults.playDurationSeconds}s',
+            value: defaults.playDurationSeconds.toDouble(),
+            min: 15,
+            max: 300,
+            divisions: 57,
+            onChanged: (v) =>
+                _updateDefaults(defaults.copyWith(playDurationSeconds: v.round())),
+          ),
+          _SliderSetting(
+            label: 'Break',
+            valueLabel: '${defaults.breakSeconds}s',
+            value: defaults.breakSeconds.toDouble(),
+            min: 0,
+            max: 120,
+            divisions: 24,
+            onChanged: (v) => _updateDefaults(defaults.copyWith(breakSeconds: v.round())),
+          ),
+          _SliderSetting(
+            label: 'Fade-out at cutoff',
+            valueLabel: '${defaults.fadeOutSeconds}s',
+            value: defaults.fadeOutSeconds.toDouble(),
+            min: 0,
+            max: 10,
+            divisions: 10,
+            onChanged: (v) => _updateDefaults(defaults.copyWith(fadeOutSeconds: v.round())),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Text('Break cue', style: Theme.of(context).textTheme.bodyLarge),
+          ),
+          RadioGroup<String>(
+            groupValue: defaults.breakCueMode,
+            onChanged: (v) => _updateDefaults(defaults.copyWith(breakCueMode: v)),
+            child: const Column(
+              children: [
+                RadioListTile<String>(
+                  title: Text('Silence'),
+                  value: BreakCueMode.silence,
+                ),
+                RadioListTile<String>(
+                  title: Text('Silence + beeps before next song'),
+                  value: BreakCueMode.beepBeforeEnd,
+                ),
+                RadioListTile<String>(
+                  title: Text('Break audio track'),
+                  value: BreakCueMode.ambientSong,
+                ),
+              ],
             ),
           ),
-          child: const Text('Save'),
-        ),
-      ],
+          if (defaults.breakCueMode == BreakCueMode.beepBeforeEnd)
+            _SliderSetting(
+              label: 'Beep lead time',
+              valueLabel: '${defaults.beepLeadSeconds}s before next song',
+              value: defaults.beepLeadSeconds.toDouble().clamp(0, defaults.breakSeconds.toDouble()),
+              min: 0,
+              max: defaults.breakSeconds.toDouble().clamp(1, double.infinity),
+              divisions: defaults.breakSeconds.clamp(1, 999),
+              onChanged: (v) =>
+                  _updateDefaults(defaults.copyWith(beepLeadSeconds: v.round())),
+            ),
+          if (defaults.breakCueMode == BreakCueMode.ambientSong)
+            Builder(
+              builder: (context) {
+                final ambientId = defaults.ambientSongId;
+                final ambientSong = ambientId == null
+                    ? null
+                    : ref.watch(_ambientSongProvider(ambientId)).valueOrNull;
+                return ListTile(
+                  title: Text(ambientSong?.title ?? 'Choose a track'),
+                  subtitle: const Text('Break audio track'),
+                  onTap: () => _pickAmbientSong(defaults),
+                );
+              },
+            ),
+          const Divider(),
+          const _SectionHeader('Library'),
+          ListTile(
+            title: const Text('Music folder'),
+            subtitle: Text(rootFolder),
+            trailing: _pickingFolder
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : null,
+            onTap: _pickingFolder ? null : _pickRootFolder,
+          ),
+          ListTile(
+            title: const Text('Rescan music folder'),
+            subtitle: Text(
+              _scanning
+                  ? 'Scanning...'
+                  : "Imports any new songs added to your device's Music folder",
+            ),
+            onTap: _scanning ? null : _rescanLibrary,
+          ),
+          ListTile(
+            title: const Text('Manage hidden songs'),
+            subtitle: Text(
+              hiddenCount == null
+                  ? 'Loading...'
+                  : hiddenCount == 0
+                      ? 'No hidden songs'
+                      : '$hiddenCount hidden',
+            ),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const HiddenSongsScreen()),
+            ),
+          ),
+          const Divider(),
+          const _SectionHeader('Data'),
+          ListTile(
+            title: const Text('Clear all app data', style: TextStyle(color: Colors.red)),
+            subtitle: const Text(
+              'Deletes all imported songs, playlists, and practice sets',
+            ),
+            onTap: () => _confirmClearData(context, ref),
+          ),
+          const Divider(),
+          const _SectionHeader('About'),
+          const AboutListTile(
+            applicationName: 'intrval',
+            applicationVersion: '1.0.0',
+            aboutBoxChildren: [
+              Text('A tempo-controlled practice-set music player for dancers.'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.title);
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+      child: Text(
+        title.toUpperCase(),
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+      ),
+    );
+  }
+}
+
+class _SliderSetting extends StatelessWidget {
+  const _SliderSetting({
+    required this.label,
+    required this.valueLabel,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.onChanged,
+    this.divisions,
+  });
+
+  final String label;
+  final String valueLabel;
+  final double value;
+  final double min;
+  final double max;
+  final int? divisions;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label, style: Theme.of(context).textTheme.bodyLarge),
+              Text(valueLabel, style: Theme.of(context).textTheme.bodyMedium),
+            ],
+          ),
+          Slider(
+            value: value.clamp(min, max),
+            min: min,
+            max: max,
+            divisions: divisions,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
     );
   }
 }

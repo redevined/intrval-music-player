@@ -6,6 +6,10 @@ class AppDefaults {
   static const int fadeOutSeconds = 3;
   static const int beepLeadSeconds = 5;
   static const int tempoPercent = 100;
+
+  /// Default folder auto-scanned for music, used until the user picks a
+  /// different one in Settings.
+  static const String musicRootFolder = '/storage/emulated/0/Music';
 }
 
 class TempoLimits {

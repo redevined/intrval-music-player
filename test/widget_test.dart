@@ -51,7 +51,10 @@ void main() {
     await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();
 
-    expect(find.text('New set defaults'), findsOneWidget);
+    // The set-defaults controls are inline (no modal), so they should be
+    // visible immediately.
+    expect(find.text('NEW SET DEFAULTS'), findsOneWidget);
+    expect(find.text('Tempo'), findsOneWidget);
 
     // Dispose the widget tree (and its ProviderScope/database) inside the
     // test's async zone, then pump once more so drift's zero-duration
