@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
+import '../player/standard_player_screen.dart';
 import 'playlist_detail_screen.dart';
 
 enum PlaylistSortField { name, dateCreated }
@@ -16,12 +17,9 @@ final playlistSortProvider =
     StateProvider.autoDispose<PlaylistSortField>((ref) => PlaylistSortField.name);
 final playlistSortAscendingProvider = StateProvider.autoDispose<bool>((ref) => true);
 
-final _playlistSongCountProvider =
-    StreamProvider.autoDispose.family<int, String>((ref, playlistId) {
-  return ref
-      .watch(playlistRepositoryProvider)
-      .watchSongs(playlistId)
-      .map((songs) => songs.length);
+final _playlistSongsProvider =
+    StreamProvider.autoDispose.family<List<Song>, String>((ref, playlistId) {
+  return ref.watch(playlistRepositoryProvider).watchSongs(playlistId);
 });
 
 /// Applies the search/sort UI state on top of the raw playlist stream.
@@ -90,13 +88,11 @@ class PlaylistListScreen extends ConsumerWidget {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
             child: TextField(
               decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.search),
                 hintText: 'Search playlists',
-                border: OutlineInputBorder(),
-                isDense: true,
               ),
               onChanged: (v) => ref.read(playlistSearchProvider.notifier).state = v,
             ),
@@ -106,50 +102,70 @@ class PlaylistListScreen extends ConsumerWidget {
               data: (playlists) => playlists.isEmpty
                   ? const Center(child: Text('No playlists yet.'))
                   : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                       itemCount: playlists.length,
                       itemBuilder: (context, i) {
                         final playlist = playlists[i];
-                        return ListTile(
-                          leading: const Icon(Icons.queue_music),
-                          title: Text(playlist.name),
-                          subtitle: Consumer(
-                            builder: (context, ref, _) {
-                              final count = ref
-                                  .watch(_playlistSongCountProvider(playlist.id))
-                                  .valueOrNull;
-                              return Text(count == null
+                        return Consumer(
+                          builder: (context, ref, _) {
+                            final songs = ref
+                                .watch(_playlistSongsProvider(playlist.id))
+                                .valueOrNull;
+                            return ListTile(
+                              leading: const Icon(Icons.queue_music),
+                              title: Text(playlist.name),
+                              subtitle: Text(songs == null
                                   ? ''
-                                  : '$count ${count == 1 ? 'song' : 'songs'}');
-                            },
-                          ),
-                          trailing: PopupMenuButton<_PlaylistAction>(
-                            icon: const Icon(Icons.more_vert),
-                            onSelected: (action) async {
-                              switch (action) {
-                                case _PlaylistAction.rename:
-                                  await _renamePlaylist(context, ref, playlist);
-                                case _PlaylistAction.delete:
-                                  await ref
-                                      .read(playlistRepositoryProvider)
-                                      .delete(playlist.id);
-                              }
-                            },
-                            itemBuilder: (context) => const [
-                              PopupMenuItem(
-                                value: _PlaylistAction.rename,
-                                child: Text('Rename'),
+                                  : '${songs.length} ${songs.length == 1 ? 'song' : 'songs'}'),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    tooltip: 'Play playlist',
+                                    icon: const Icon(Icons.play_arrow),
+                                    onPressed: (songs ?? const []).isEmpty
+                                        ? null
+                                        : () => Navigator.of(context, rootNavigator: true)
+                                                .push(
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    StandardPlayerScreen(songs: songs!),
+                                              ),
+                                            ),
+                                  ),
+                                  PopupMenuButton<_PlaylistAction>(
+                                    icon: const Icon(Icons.more_vert),
+                                    padding: EdgeInsets.zero,
+                                    onSelected: (action) async {
+                                      switch (action) {
+                                        case _PlaylistAction.rename:
+                                          await _renamePlaylist(context, ref, playlist);
+                                        case _PlaylistAction.delete:
+                                          await ref
+                                              .read(playlistRepositoryProvider)
+                                              .delete(playlist.id);
+                                      }
+                                    },
+                                    itemBuilder: (context) => const [
+                                      PopupMenuItem(
+                                        value: _PlaylistAction.rename,
+                                        child: Text('Rename'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: _PlaylistAction.delete,
+                                        child: Text('Delete'),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
-                              PopupMenuItem(
-                                value: _PlaylistAction.delete,
-                                child: Text('Delete'),
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => PlaylistDetailScreen(playlist: playlist),
+                                ),
                               ),
-                            ],
-                          ),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => PlaylistDetailScreen(playlist: playlist),
-                            ),
-                          ),
+                            );
+                          },
                         );
                       },
                     ),

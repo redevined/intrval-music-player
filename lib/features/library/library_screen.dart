@@ -96,13 +96,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
             child: TextField(
               decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.search),
                 hintText: 'Search title, artist, album',
-                border: OutlineInputBorder(),
-                isDense: true,
               ),
               onChanged: (v) => ref.read(librarySearchProvider.notifier).state = v,
             ),
@@ -120,6 +118,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                       ),
                     )
                   : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                       itemCount: songs.length,
                       itemBuilder: (context, i) => _buildTile(context, songs, i),
                     ),
@@ -146,6 +145,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           ),
           PopupMenuButton<_SongAction>(
             icon: const Icon(Icons.more_vert),
+            padding: EdgeInsets.zero,
             onSelected: (action) async {
               switch (action) {
                 case _SongAction.edit:
@@ -166,7 +166,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           ),
         ],
       ),
-      onTap: () => Navigator.of(context).push(
+      onTap: () => Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(
           builder: (_) => StandardPlayerScreen(songs: songs, initialIndex: i),
         ),

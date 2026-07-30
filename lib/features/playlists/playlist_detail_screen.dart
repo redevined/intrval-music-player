@@ -94,13 +94,11 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
             child: TextField(
               decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.search),
                 hintText: 'Search this playlist',
-                border: OutlineInputBorder(),
-                isDense: true,
               ),
               onChanged: (v) => setState(() => _query = v),
             ),
@@ -120,12 +118,14 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                 }
                 if (_sort != PlaylistViewSort.manual) {
                   return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     itemCount: songs.length,
                     itemBuilder: (context, i) =>
                         _buildTile(context, songs, i, showDragHandle: false),
                   );
                 }
                 return ReorderableListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   itemCount: songs.length,
                   itemBuilder: (context, i) =>
                       _buildTile(context, songs, i, showDragHandle: true),
@@ -153,7 +153,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
             tooltip: 'Play playlist',
             onPressed: (songsAsync.valueOrNull ?? const []).isEmpty
                 ? null
-                : () => Navigator.of(context).push(
+                : () => Navigator.of(context, rootNavigator: true).push(
                       MaterialPageRoute(
                         builder: (_) =>
                             StandardPlayerScreen(songs: songsAsync.valueOrNull!),
@@ -193,6 +193,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
           : null,
       trailing: PopupMenuButton<_SongAction>(
         icon: const Icon(Icons.more_vert),
+        padding: EdgeInsets.zero,
         onSelected: (action) async {
           switch (action) {
             case _SongAction.edit:
@@ -208,7 +209,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
           PopupMenuItem(value: _SongAction.remove, child: Text('Remove from playlist')),
         ],
       ),
-      onTap: () => Navigator.of(context).push(
+      onTap: () => Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(
           builder: (_) => StandardPlayerScreen(songs: songs, initialIndex: i),
         ),

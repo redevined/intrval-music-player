@@ -33,6 +33,9 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
+  final List<GlobalKey<NavigatorState>> _navigatorKeys =
+      List.generate(4, (_) => GlobalKey<NavigatorState>());
+
   static const _screens = [
     LibraryScreen(),
     PlaylistListScreen(),
@@ -40,25 +43,52 @@ class _HomeShellState extends State<HomeShell> {
     SettingsScreen(),
   ];
 
+  // Each tab gets its own Navigator so pushing a detail screen (playlist
+  // detail, set builder) only replaces that tab's content - the bottom
+  // nav bar and mini player live outside these and stay put.
+  Widget _buildTab(int index) {
+    return Navigator(
+      key: _navigatorKeys[index],
+      onGenerateRoute: (settings) => MaterialPageRoute(
+        builder: (_) => _screens[index],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(index: _index, children: _screens),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const MiniPlayer(),
-          NavigationBar(
-            selectedIndex: _index,
-            onDestinationSelected: (i) => setState(() => _index = i),
-            destinations: const [
-              NavigationDestination(icon: Icon(Icons.library_music), label: 'Library'),
-              NavigationDestination(icon: Icon(Icons.queue_music), label: 'Playlists'),
-              NavigationDestination(icon: Icon(Icons.timelapse), label: 'Sets'),
-              NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
-            ],
-          ),
-        ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        final tabNavigator = _navigatorKeys[_index].currentState;
+        if (tabNavigator != null && tabNavigator.canPop()) {
+          tabNavigator.pop();
+        } else {
+          Navigator.of(context).maybePop();
+        }
+      },
+      child: Scaffold(
+        body: IndexedStack(
+          index: _index,
+          children: List.generate(_screens.length, _buildTab),
+        ),
+        bottomNavigationBar: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const MiniPlayer(),
+            NavigationBar(
+              selectedIndex: _index,
+              onDestinationSelected: (i) => setState(() => _index = i),
+              destinations: const [
+                NavigationDestination(icon: Icon(Icons.library_music), label: 'Library'),
+                NavigationDestination(icon: Icon(Icons.queue_music), label: 'Playlists'),
+                NavigationDestination(icon: Icon(Icons.timelapse), label: 'Sets'),
+                NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

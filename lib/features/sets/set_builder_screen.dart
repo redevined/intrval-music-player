@@ -116,7 +116,7 @@ class SetBuilderScreen extends ConsumerWidget {
             tooltip: 'Start practice session',
             onPressed: (entriesAsync.valueOrNull ?? const []).isEmpty
                 ? null
-                : () => Navigator.of(context).push(
+                : () => Navigator.of(context, rootNavigator: true).push(
                       MaterialPageRoute(
                         builder: (_) => PracticeSessionScreen(practiceSet: currentSet),
                       ),

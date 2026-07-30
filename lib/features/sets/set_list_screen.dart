@@ -12,16 +12,23 @@ final practiceSetsProvider = StreamProvider.autoDispose<List<PracticeSet>>((ref)
   return ref.watch(practiceSetRepositoryProvider).watchAll();
 });
 
+final setSearchProvider = StateProvider.autoDispose<String>((ref) => '');
 final setSortProvider = StateProvider.autoDispose<SetSortField>((ref) => SetSortField.name);
 final setSortAscendingProvider = StateProvider.autoDispose<bool>((ref) => true);
 
+/// Applies the search/sort UI state on top of the raw practice-set stream,
+/// mirroring how the Library and Playlists tabs filter their lists.
 final visiblePracticeSetsProvider = Provider.autoDispose<AsyncValue<List<PracticeSet>>>((ref) {
   final setsAsync = ref.watch(practiceSetsProvider);
+  final query = ref.watch(setSearchProvider).trim().toLowerCase();
   final sortField = ref.watch(setSortProvider);
   final ascending = ref.watch(setSortAscendingProvider);
 
   return setsAsync.whenData((sets) {
     var result = [...sets];
+    if (query.isNotEmpty) {
+      result = result.where((s) => s.name.toLowerCase().contains(query)).toList();
+    }
     switch (sortField) {
       case SetSortField.name:
         result.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
@@ -76,70 +83,92 @@ class SetListScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: setsAsync.when(
-        data: (sets) => sets.isEmpty
-            ? const Center(child: Text('No practice sets yet.'))
-            : ListView.builder(
-                itemCount: sets.length,
-                itemBuilder: (context, i) {
-                  final set = sets[i];
-                  return ListTile(
-                    leading: const Icon(Icons.timelapse),
-                    title: Text(set.name),
-                    subtitle: Consumer(
-                      builder: (context, ref, _) {
-                        final count = ref.watch(_setEntryCountProvider(set.id)).valueOrNull;
-                        return Text(count == null
-                            ? ''
-                            : '$count ${count == 1 ? 'entry' : 'entries'}');
-                      },
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.play_arrow),
-                          onPressed: () => Navigator.of(context).push(
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+            child: TextField(
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search),
+                hintText: 'Search sets',
+              ),
+              onChanged: (v) => ref.read(setSearchProvider.notifier).state = v,
+            ),
+          ),
+          Expanded(
+            child: setsAsync.when(
+              data: (sets) => sets.isEmpty
+                  ? const Center(child: Text('No practice sets yet.'))
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      itemCount: sets.length,
+                      itemBuilder: (context, i) {
+                        final set = sets[i];
+                        return ListTile(
+                          leading: const Icon(Icons.timelapse),
+                          title: Text(set.name),
+                          subtitle: Consumer(
+                            builder: (context, ref, _) {
+                              final count =
+                                  ref.watch(_setEntryCountProvider(set.id)).valueOrNull;
+                              return Text(count == null
+                                  ? ''
+                                  : '$count ${count == 1 ? 'entry' : 'entries'}');
+                            },
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                tooltip: 'Start session',
+                                icon: const Icon(Icons.play_arrow),
+                                onPressed: () =>
+                                    Navigator.of(context, rootNavigator: true).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        PracticeSessionScreen(practiceSet: set),
+                                  ),
+                                ),
+                              ),
+                              PopupMenuButton<_SetAction>(
+                                icon: const Icon(Icons.more_vert),
+                                padding: EdgeInsets.zero,
+                                onSelected: (action) async {
+                                  switch (action) {
+                                    case _SetAction.rename:
+                                      await _renameSet(context, ref, set);
+                                    case _SetAction.delete:
+                                      await ref
+                                          .read(practiceSetRepositoryProvider)
+                                          .delete(set.id);
+                                  }
+                                },
+                                itemBuilder: (context) => const [
+                                  PopupMenuItem(
+                                    value: _SetAction.rename,
+                                    child: Text('Rename'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: _SetAction.delete,
+                                    child: Text('Delete'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => PracticeSessionScreen(practiceSet: set),
+                              builder: (_) => SetBuilderScreen(practiceSet: set),
                             ),
                           ),
-                        ),
-                        PopupMenuButton<_SetAction>(
-                          icon: const Icon(Icons.more_vert),
-                          onSelected: (action) async {
-                            switch (action) {
-                              case _SetAction.rename:
-                                await _renameSet(context, ref, set);
-                              case _SetAction.delete:
-                                await ref
-                                    .read(practiceSetRepositoryProvider)
-                                    .delete(set.id);
-                            }
-                          },
-                          itemBuilder: (context) => const [
-                            PopupMenuItem(
-                              value: _SetAction.rename,
-                              child: Text('Rename'),
-                            ),
-                            PopupMenuItem(
-                              value: _SetAction.delete,
-                              child: Text('Delete'),
-                            ),
-                          ],
-                        ),
-                      ],
+                        );
+                      },
                     ),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => SetBuilderScreen(practiceSet: set),
-                      ),
-                    ),
-                  );
-                },
-              ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Error: $e')),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _createSet(context, ref),
