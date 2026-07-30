@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
+import '../../widgets/tab_heading.dart';
 import '../player/standard_player_screen.dart';
 import 'playlist_detail_screen.dart';
 
@@ -59,7 +60,7 @@ class PlaylistListScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Playlists'),
+        title: const TabHeading('Playlists'),
         actions: [
           IconButton(
             tooltip: ref.watch(playlistSortAscendingProvider) ? 'Ascending' : 'Descending',

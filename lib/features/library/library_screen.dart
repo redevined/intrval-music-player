@@ -6,6 +6,7 @@ import '../../data/providers.dart';
 import '../../data/repositories/song_repository.dart';
 import '../../widgets/song_edit_dialog.dart';
 import '../../widgets/song_tile.dart';
+import '../../widgets/tab_heading.dart';
 import '../player/standard_player_screen.dart';
 
 final librarySearchProvider = StateProvider<String>((ref) => '');
@@ -65,7 +66,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Library'),
+        title: const TabHeading('Library'),
         actions: [
           IconButton(
             tooltip: showHidden ? 'Show all songs' : 'Show hidden songs only',

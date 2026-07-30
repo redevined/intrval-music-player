@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
+import '../../widgets/tab_heading.dart';
 import '../player/practice_session_screen.dart';
 import 'set_builder_screen.dart';
 
@@ -57,7 +58,7 @@ class SetListScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Practice Sets'),
+        title: const TabHeading('Practice Sets'),
         actions: [
           IconButton(
             tooltip: ref.watch(setSortAscendingProvider) ? 'Ascending' : 'Descending',

@@ -5,6 +5,7 @@ import '../../core/constants.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
 import '../../data/repositories/app_settings_repository.dart';
+import '../../widgets/tab_heading.dart';
 import '../library/library_screen.dart' show librarySongsProvider;
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -36,7 +37,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final defaults = ref.watch(setDefaultsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: const TabHeading('Settings')),
       body: ListView(
         children: [
           ListTile(

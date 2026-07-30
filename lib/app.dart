@@ -79,7 +79,11 @@ class _HomeShellState extends State<HomeShell> {
             const MiniPlayer(),
             NavigationBar(
               selectedIndex: _index,
-              onDestinationSelected: (i) => setState(() => _index = i),
+              onDestinationSelected: (i) {
+                _navigatorKeys[i].currentState
+                    ?.popUntil((route) => route.isFirst);
+                setState(() => _index = i);
+              },
               destinations: const [
                 NavigationDestination(icon: Icon(Icons.library_music), label: 'Library'),
                 NavigationDestination(icon: Icon(Icons.queue_music), label: 'Playlists'),
