@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:audio_service/audio_service.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database/database.dart';
@@ -361,7 +360,7 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
 
       if (resolved.breakCueMode == BreakCueMode.beepBeforeEnd &&
           remaining == resolved.beepLeadSeconds) {
-        SystemSound.play(SystemSoundType.click);
+        unawaited(_ref.read(audioHandlerProvider).playBeep());
       }
 
       if (remaining <= 0) {

@@ -49,6 +49,11 @@ class FakeAudioHandler implements AudioPlayerHandler {
   @override
   Future<void> setTempoPercent(double percent) async => tempoPercent = percent;
 
+  int beepCount = 0;
+
+  @override
+  Future<void> playBeep() async => beepCount++;
+
   @override
   Future<void> fadeOutAndStop(Duration duration) async => stop();
 
@@ -160,6 +165,26 @@ void main() {
     await pumpEventQueue();
 
     expect(session()!.phase, SessionPhase.complete);
+  });
+
+  test('the break-cue beep plays through the handler at the configured lead time',
+      () async {
+    final set = await harness.createSetWithEntries(
+      ['Waltz', 'Tango'],
+      breakSeconds: 3,
+      breakCueMode: BreakCueMode.beepBeforeEnd,
+      beepLeadSeconds: 2,
+    );
+    await controller().start(set);
+
+    handler.onTrackComplete!();
+    await pumpEventQueue();
+    expect(session()!.phase, SessionPhase.breaking);
+    expect(handler.beepCount, 0);
+
+    await Future<void>.delayed(const Duration(milliseconds: 1100));
+    expect(session()!.breakSecondsRemaining, 2);
+    expect(handler.beepCount, 1);
   });
 
   test('session state outlives its listeners, so leaving the screen keeps it',
@@ -276,6 +301,8 @@ class PracticeSetRepositoryHarness {
     int? breakSeconds,
     int? tempoPercent,
     int? playDurationSeconds,
+    String? breakCueMode,
+    int? beepLeadSeconds,
     bool emptyFirstEntry = false,
   }) async {
     final songs = _container.read(songRepositoryProvider);
@@ -297,7 +324,11 @@ class PracticeSetRepositoryHarness {
         label: entryLabels[i],
         playlistId: useEmpty ? emptyPlaylistId : playlistId,
       );
-      if (breakSeconds != null || tempoPercent != null || playDurationSeconds != null) {
+      if (breakSeconds != null ||
+          tempoPercent != null ||
+          playDurationSeconds != null ||
+          breakCueMode != null ||
+          beepLeadSeconds != null) {
         await sets.updateEntry(
           entryId,
           SetEntriesCompanion(
@@ -307,6 +338,11 @@ class PracticeSetRepositoryHarness {
                 tempoPercent != null ? Value(tempoPercent) : const Value.absent(),
             playDurationSeconds: playDurationSeconds != null
                 ? Value(playDurationSeconds)
+                : const Value.absent(),
+            breakCueMode:
+                breakCueMode != null ? Value(breakCueMode) : const Value.absent(),
+            beepLeadSeconds: beepLeadSeconds != null
+                ? Value(beepLeadSeconds)
                 : const Value.absent(),
           ),
         );

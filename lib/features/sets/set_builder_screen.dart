@@ -244,9 +244,6 @@ class SetBuilderScreen extends ConsumerWidget {
     var play = currentSet.defaultPlayDurationSeconds;
     var brk = currentSet.defaultBreakSeconds;
     var fade = currentSet.defaultFadeOutSeconds;
-    var breakCueMode = currentSet.defaultBreakCueMode;
-    var beepLead = currentSet.defaultBeepLeadSeconds;
-    var ambientSongId = currentSet.defaultAmbientSongId;
 
     await showDialog<void>(
       context: context,
@@ -298,57 +295,6 @@ class SetBuilderScreen extends ConsumerWidget {
                   divisions: 10,
                   onChanged: (v) => setState(() => fade = v.round()),
                 ),
-                const SizedBox(height: 12),
-                Text('Break cue', style: Theme.of(context).textTheme.bodyLarge),
-                RadioGroup<String>(
-                  groupValue: breakCueMode,
-                  onChanged: (v) => setState(() => breakCueMode = v!),
-                  child: const Column(
-                    children: [
-                      RadioListTile<String>(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text('Silence'),
-                        value: BreakCueMode.silence,
-                      ),
-                      RadioListTile<String>(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text('Silence + beeps before next song'),
-                        value: BreakCueMode.beepBeforeEnd,
-                      ),
-                      RadioListTile<String>(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text('Break audio track'),
-                        value: BreakCueMode.ambientSong,
-                      ),
-                    ],
-                  ),
-                ),
-                if (breakCueMode == BreakCueMode.beepBeforeEnd)
-                  LabeledSlider(
-                    padding: EdgeInsets.zero,
-                    label: 'Beep lead time',
-                    valueLabel: '${beepLead}s before next song',
-                    value: beepLead.toDouble().clamp(0, brk.toDouble()),
-                    min: 0,
-                    max: brk.toDouble().clamp(1, double.infinity),
-                    divisions: brk.clamp(1, 999),
-                    onChanged: (v) => setState(() => beepLead = v.round()),
-                  ),
-                if (breakCueMode == BreakCueMode.ambientSong)
-                  FutureBuilder<Song?>(
-                    future: ambientSongId == null
-                        ? Future.value(null)
-                        : ref.read(songRepositoryProvider).getById(ambientSongId!),
-                    builder: (context, snapshot) => ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(snapshot.data?.title ?? 'Choose a track'),
-                      subtitle: const Text('Break audio track'),
-                      onTap: () async {
-                        final song = await _pickAmbientSong(context, ref);
-                        if (song != null) setState(() => ambientSongId = song.id);
-                      },
-                    ),
-                  ),
               ],
             ),
           ),
@@ -366,9 +312,6 @@ class SetBuilderScreen extends ConsumerWidget {
                         defaultPlayDurationSeconds: Value(play),
                         defaultBreakSeconds: Value(brk),
                         defaultFadeOutSeconds: Value(fade),
-                        defaultBreakCueMode: Value(breakCueMode),
-                        defaultBeepLeadSeconds: Value(beepLead),
-                        defaultAmbientSongId: Value(ambientSongId),
                       ),
                     );
                 if (context.mounted) Navigator.of(context).pop();
@@ -376,37 +319,6 @@ class SetBuilderScreen extends ConsumerWidget {
               child: const Text('Save'),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Future<Song?> _pickAmbientSong(BuildContext context, WidgetRef ref) async {
-    return showModalBottomSheet<Song>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.7,
-        builder: (context, scrollController) => Consumer(
-          builder: (context, ref, _) {
-            final songsAsync = ref.watch(librarySongsProvider);
-            return songsAsync.when(
-              data: (songs) => songs.isEmpty
-                  ? const Center(child: Text('No songs in your library yet.'))
-                  : ListView.builder(
-                      controller: scrollController,
-                      itemCount: songs.length,
-                      itemBuilder: (context, i) => ListTile(
-                        title: Text(songs[i].title),
-                        subtitle: songs[i].artist != null ? Text(songs[i].artist!) : null,
-                        onTap: () => Navigator.of(context).pop(songs[i]),
-                      ),
-                    ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
-            );
-          },
         ),
       ),
     );

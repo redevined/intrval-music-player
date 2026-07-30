@@ -24,6 +24,11 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
 
   final AudioPlayer _player = AudioPlayer();
 
+  // A separate player for short UI cues (currently just the break-countdown
+  // beep) so it can play alongside whatever - if anything - the main player
+  // is doing, without disturbing its loaded track/position/tempo.
+  final AudioPlayer _cuePlayer = AudioPlayer();
+
   /// Called when the current track finishes playing naturally.
   void Function()? onTrackComplete;
 
@@ -49,6 +54,20 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
 
   /// [percent] is 70-130, matching the app's tempo slider range.
   Future<void> setTempoPercent(double percent) => _player.setSpeed(percent / 100.0);
+
+  /// Plays the break-countdown beep cue. `SystemSound.play` was tried here
+  /// first, but it's routed through Android's UI "touch sound" effect
+  /// channel - silent whenever that system setting is off, and inaudibly
+  /// quiet even when it's on. A bundled asset played through just_audio
+  /// goes out at normal media volume instead, so it's reliably audible.
+  Future<void> playBeep() async {
+    try {
+      await _cuePlayer.setAsset('assets/sounds/beep.wav');
+      await _cuePlayer.play();
+    } catch (_) {
+      // A missing/undecodable cue asset shouldn't take the session down.
+    }
+  }
 
   @override
   Future<void> play() => _player.play();
