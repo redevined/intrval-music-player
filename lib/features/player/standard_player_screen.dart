@@ -4,8 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
+import '../../widgets/player_artwork.dart';
+import '../../widgets/seek_bar.dart';
 import '../../widgets/tempo_slider.dart';
 import 'now_playing_controller.dart';
+import 'player_shell.dart';
 
 /// Displays and controls the shared [nowPlayingProvider] queue. If [songs]
 /// is provided, starts (or replaces) that queue at [initialIndex] on open -
@@ -50,93 +53,83 @@ class _StandardPlayerScreenState extends ConsumerState<StandardPlayerScreen> {
     }
 
     final song = nowPlaying.currentSong;
+    final controller = ref.read(nowPlayingProvider.notifier);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Now Playing')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.music_note, size: 96),
-            const SizedBox(height: 24),
-            Text(
-              song.title,
-              style: Theme.of(context).textTheme.headlineSmall,
-              textAlign: TextAlign.center,
-            ),
-            if (song.artist != null)
-              Text(song.artist!, style: Theme.of(context).textTheme.bodyLarge),
-            const SizedBox(height: 32),
-            StreamBuilder<Duration>(
-              stream: handler.positionStream,
-              builder: (context, snapshot) {
-                final position = snapshot.data ?? Duration.zero;
-                final duration = handler.duration ?? Duration.zero;
-                return Column(
-                  children: [
-                    Slider(
-                      value: position.inMilliseconds
-                          .toDouble()
-                          .clamp(0, duration.inMilliseconds.toDouble().clamp(1, double.infinity)),
-                      max: duration.inMilliseconds.toDouble().clamp(1, double.infinity),
-                      onChanged: (v) => handler.seek(Duration(milliseconds: v.round())),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(_format(position)),
-                        Text(_format(duration)),
-                      ],
-                    ),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-            TempoSlider(
-              percent: nowPlaying.tempoPercent,
-              onChanged: (p) => ref.read(nowPlayingProvider.notifier).setTempo(p),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  iconSize: 40,
-                  icon: const Icon(Icons.skip_previous),
-                  onPressed: () => ref.read(nowPlayingProvider.notifier).previous(),
-                ),
-                StreamBuilder<PlaybackState>(
-                  stream: handler.playbackState,
-                  builder: (context, snapshot) {
-                    final playing = snapshot.data?.playing ?? false;
-                    return IconButton(
-                      iconSize: 64,
-                      icon: Icon(playing ? Icons.pause_circle : Icons.play_circle),
-                      onPressed: () =>
-                          ref.read(nowPlayingProvider.notifier).togglePlayPause(),
-                    );
-                  },
-                ),
-                IconButton(
-                  iconSize: 40,
-                  icon: const Icon(Icons.skip_next),
-                  onPressed: nowPlaying.hasNext
-                      ? () => ref.read(nowPlayingProvider.notifier).next()
-                      : null,
-                ),
-              ],
-            ),
-          ],
-        ),
+    return PlayerShell(
+      appBarTitle: 'Now Playing',
+      artwork: PlayerArtwork(
+        badge: nowPlaying.tempoPercent != 100
+            ? Text('${nowPlaying.tempoPercent}% tempo')
+            : null,
+      ),
+      contextHeader: nowPlaying.songs.length > 1
+          ? _QueuePositionLabel(
+              index: nowPlaying.index,
+              total: nowPlaying.songs.length,
+            )
+          : null,
+      title: song.title,
+      subtitle: song.artist,
+      progress: StreamBuilder<Duration>(
+        stream: handler.positionStream,
+        builder: (context, snapshot) {
+          return SeekBar(
+            position: snapshot.data ?? Duration.zero,
+            duration: handler.duration ?? Duration.zero,
+            onSeek: handler.seek,
+          );
+        },
+      ),
+      tempo: TempoSlider(
+        percent: nowPlaying.tempoPercent,
+        onChanged: controller.setTempo,
+      ),
+      controls: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          TransportButton(
+            icon: Icons.skip_previous_rounded,
+            tooltip: 'Previous',
+            onPressed: controller.previous,
+          ),
+          const SizedBox(width: 20),
+          StreamBuilder<PlaybackState>(
+            stream: handler.playbackState,
+            builder: (context, snapshot) {
+              return PlayPauseButton(
+                playing: snapshot.data?.playing ?? false,
+                onPressed: controller.togglePlayPause,
+              );
+            },
+          ),
+          const SizedBox(width: 20),
+          TransportButton(
+            icon: Icons.skip_next_rounded,
+            tooltip: 'Next',
+            onPressed: nowPlaying.hasNext ? controller.next : null,
+          ),
+        ],
       ),
     );
   }
+}
 
-  String _format(Duration d) {
-    final m = d.inMinutes;
-    final s = d.inSeconds % 60;
-    return '$m:${s.toString().padLeft(2, '0')}';
+class _QueuePositionLabel extends StatelessWidget {
+  const _QueuePositionLabel({required this.index, required this.total});
+
+  final int index;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Text(
+      'Track ${index + 1} of $total',
+      style: theme.textTheme.labelMedium?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+        letterSpacing: 0.6,
+      ),
+    );
   }
 }

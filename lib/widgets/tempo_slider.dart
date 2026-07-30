@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../core/constants.dart';
 
+/// Pitch-preserving playback-speed control, presented as a labelled panel so
+/// it reads as a distinct setting rather than a second scrub bar.
 class TempoSlider extends StatelessWidget {
   const TempoSlider({
     super.key,
@@ -14,32 +16,82 @@ class TempoSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Icon(Icons.slow_motion_video),
-        Expanded(
-          child: Slider(
-            value: percent.toDouble(),
-            min: TempoLimits.minPercent.toDouble(),
-            max: TempoLimits.maxPercent.toDouble(),
-            divisions: (TempoLimits.maxPercent - TempoLimits.minPercent) ~/
-                TempoLimits.stepPercent,
-            label: '$percent%',
-            onChanged: (v) => onChanged(v.round()),
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final isDefault = percent == AppDefaults.tempoPercent;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 8, 12),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.speed, size: 18, color: colors.onSurfaceVariant),
+              const SizedBox(width: 8),
+              Text(
+                'Tempo',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+              const Spacer(),
+              _ValuePill(percent: percent, emphasized: !isDefault),
+              IconButton(
+                tooltip: 'Reset to ${AppDefaults.tempoPercent}%',
+                icon: const Icon(Icons.restart_alt, size: 20),
+                visualDensity: VisualDensity.compact,
+                onPressed:
+                    isDefault ? null : () => onChanged(AppDefaults.tempoPercent),
+              ),
+            ],
           ),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Slider(
+              value: percent.toDouble(),
+              min: TempoLimits.minPercent.toDouble(),
+              max: TempoLimits.maxPercent.toDouble(),
+              divisions: (TempoLimits.maxPercent - TempoLimits.minPercent) ~/
+                  TempoLimits.stepPercent,
+              label: '$percent%',
+              onChanged: (v) => onChanged(v.round()),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ValuePill extends StatelessWidget {
+  const _ValuePill({required this.percent, required this.emphasized});
+
+  final int percent;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: emphasized ? colors.primary : colors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        '$percent%',
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: emphasized ? colors.onPrimary : colors.onSurfaceVariant,
+          fontWeight: FontWeight.w600,
         ),
-        SizedBox(
-          width: 48,
-          child: Text('$percent%', textAlign: TextAlign.end),
-        ),
-        IconButton(
-          tooltip: 'Reset tempo to ${AppDefaults.tempoPercent}%',
-          icon: const Icon(Icons.restart_alt),
-          onPressed: percent == AppDefaults.tempoPercent
-              ? null
-              : () => onChanged(AppDefaults.tempoPercent),
-        ),
-      ],
+      ),
     );
   }
 }

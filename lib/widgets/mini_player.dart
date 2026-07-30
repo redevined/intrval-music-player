@@ -4,112 +4,212 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/providers.dart';
 import '../features/player/now_playing_controller.dart';
+import '../features/player/practice_session_controller.dart';
+import '../features/player/practice_session_screen.dart';
 import '../features/player/standard_player_screen.dart';
 
-/// Persistent playback bar shown above the bottom navigation whenever a
-/// [nowPlayingProvider] queue is active, regardless of which tab is open.
-/// Tapping it opens the full Now Playing screen.
+/// Persistent strip above the nav bar summarising whatever is currently
+/// playing - an ad-hoc queue *or* a running practice set - and offering the
+/// minimum controls for it. Tapping it reopens the matching full player.
+///
+/// It renders nothing when nothing is playing, so the nav bar sits flush at
+/// the bottom as before.
 class MiniPlayer extends ConsumerWidget {
   const MiniPlayer({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final session = ref.watch(practiceSessionProvider);
     final nowPlaying = ref.watch(nowPlayingProvider);
+
+    if (session != null && session.phase != SessionPhase.complete) {
+      final breaking = session.phase == SessionPhase.breaking;
+      final entry = session.currentEntry;
+      final controller = ref.read(practiceSessionProvider.notifier);
+
+      return _MiniPlayerBar(
+        leadingIcon: breaking ? Icons.self_improvement : Icons.timelapse,
+        title: breaking
+            ? 'Break - ${_formatSeconds(session.breakSecondsRemaining)}'
+            : session.currentSong?.title ?? 'Loading...',
+        subtitle: [
+          session.practiceSet.name,
+          if (entry != null) '${entry.label} (${session.positionLabel})',
+        ].join(' - '),
+        progress: breaking && session.breakTotalSeconds > 0
+            ? 1 - (session.breakSecondsRemaining / session.breakTotalSeconds)
+            : null,
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const PracticeSessionScreen()),
+        ),
+        actions: [
+          _MiniIconButton(
+            icon: session.paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+            tooltip: session.paused ? 'Resume' : 'Pause',
+            onPressed: controller.togglePause,
+          ),
+          _MiniIconButton(
+            icon: Icons.skip_next_rounded,
+            tooltip: breaking ? 'Skip break' : 'Skip to next entry',
+            onPressed: controller.skip,
+          ),
+        ],
+      );
+    }
+
     if (nowPlaying == null) return const SizedBox.shrink();
 
-    final handler = ref.watch(audioHandlerProvider);
     final song = nowPlaying.currentSong;
+    final handler = ref.watch(audioHandlerProvider);
+    final controller = ref.read(nowPlayingProvider.notifier);
+
+    return _MiniPlayerBar(
+      leadingIcon: Icons.music_note,
+      title: song.title,
+      subtitle: song.artist ?? 'Unknown artist',
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const StandardPlayerScreen()),
+      ),
+      actions: [
+        StreamBuilder<PlaybackState>(
+          stream: handler.playbackState,
+          builder: (context, snapshot) {
+            final playing = snapshot.data?.playing ?? false;
+            return _MiniIconButton(
+              icon: playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              tooltip: playing ? 'Pause' : 'Play',
+              onPressed: controller.togglePlayPause,
+            );
+          },
+        ),
+        _MiniIconButton(
+          icon: Icons.skip_next_rounded,
+          tooltip: 'Next',
+          onPressed: nowPlaying.hasNext ? controller.next : null,
+        ),
+      ],
+    );
+  }
+
+  static String _formatSeconds(int seconds) {
+    final clamped = seconds < 0 ? 0 : seconds;
+    final m = clamped ~/ 60;
+    final s = clamped % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
+}
+
+class _MiniPlayerBar extends StatelessWidget {
+  const _MiniPlayerBar({
+    required this.leadingIcon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    required this.actions,
+    this.progress,
+  });
+
+  final IconData leadingIcon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final List<Widget> actions;
+
+  /// 0-1 for a determinate hairline along the top edge (break countdown).
+  final double? progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
 
     return Material(
-      elevation: 8,
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      color: colors.surfaceContainerHigh,
       child: InkWell(
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const StandardPlayerScreen()),
-        ),
-        child: SafeArea(
-          top: false,
-          bottom: false,
-          child: SizedBox(
-            height: 64,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                StreamBuilder<Duration>(
-                  stream: handler.positionStream,
-                  builder: (context, snapshot) {
-                    final position = snapshot.data ?? Duration.zero;
-                    final duration = handler.duration ?? Duration.zero;
-                    final ratio = duration.inMilliseconds > 0
-                        ? position.inMilliseconds / duration.inMilliseconds
-                        : 0.0;
-                    return LinearProgressIndicator(
-                      value: ratio.clamp(0.0, 1.0),
-                      minHeight: 2,
-                    );
-                  },
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Row(
+        onTap: onTap,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: 2,
+              child: progress == null
+                  ? null
+                  : LinearProgressIndicator(
+                      value: progress!.clamp(0.0, 1.0),
+                      backgroundColor: colors.surfaceContainerHighest,
+                    ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: colors.secondaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      leadingIcon,
+                      size: 22,
+                      color: colors.onSecondaryContainer,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(width: 4),
-                        const Icon(Icons.music_note),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                song.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                              if (song.artist != null)
-                                Text(
-                                  song.artist!,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                            ],
+                        Text(
+                          title,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.skip_previous),
-                          onPressed: () =>
-                              ref.read(nowPlayingProvider.notifier).previous(),
-                        ),
-                        StreamBuilder<PlaybackState>(
-                          stream: handler.playbackState,
-                          builder: (context, snapshot) {
-                            final playing = snapshot.data?.playing ?? false;
-                            return IconButton(
-                              icon: Icon(playing ? Icons.pause : Icons.play_arrow),
-                              onPressed: () => ref
-                                  .read(nowPlayingProvider.notifier)
-                                  .togglePlayPause(),
-                            );
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.skip_next),
-                          onPressed: nowPlaying.hasNext
-                              ? () => ref.read(nowPlayingProvider.notifier).next()
-                              : null,
+                        Text(
+                          subtitle,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colors.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
+                  ...actions,
+                ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
+    );
+  }
+}
+
+class _MiniIconButton extends StatelessWidget {
+  const _MiniIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      icon: Icon(icon),
+      iconSize: 26,
+      visualDensity: VisualDensity.compact,
+      onPressed: onPressed,
     );
   }
 }

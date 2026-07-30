@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
+import 'practice_session_controller.dart';
 
 /// The currently-playing ad-hoc queue (Library/Playlist playback), shared
 /// across the whole app so a persistent mini-player can show/control it
@@ -42,9 +43,9 @@ class NowPlayingController extends StateNotifier<NowPlayingState?> {
   final Ref _ref;
 
   /// Re-wires the audio handler's completion callback to this controller.
-  /// [PracticeSessionScreen] takes exclusive ownership of that callback
-  /// while a practice session is active and should call this on dispose so
-  /// mini-player auto-advance resumes afterwards.
+  /// [PracticeSessionController] takes exclusive ownership of that callback
+  /// while a practice session is active and calls this when the session ends
+  /// so mini-player auto-advance resumes afterwards.
   void attachTrackCompleteHandler() => _attachTrackCompleteHandler();
 
   void _attachTrackCompleteHandler() {
@@ -53,6 +54,9 @@ class NowPlayingController extends StateNotifier<NowPlayingState?> {
 
   Future<void> playQueue(List<Song> songs, int initialIndex) async {
     if (songs.isEmpty) return;
+    // Ad-hoc playback and a timed practice set can't share the one audio
+    // handler, so starting a queue ends any running session.
+    await _ref.read(practiceSessionProvider.notifier).stop();
     state = NowPlayingState(
       songs: songs,
       index: initialIndex,
