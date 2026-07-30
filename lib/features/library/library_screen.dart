@@ -115,32 +115,22 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
   Widget _buildTile(BuildContext context, List<Song> songs, int i) {
     final song = songs[i];
-    final bpm = song.bpmManual ?? song.bpmDetected;
     return SongTile(
       song: song,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            bpm != null ? '${bpm.round()} BPM' : '-- BPM',
-            style: Theme.of(context).textTheme.labelMedium,
-          ),
-          PopupMenuButton<_SongAction>(
-            icon: const Icon(Icons.more_vert),
-            padding: EdgeInsets.zero,
-            onSelected: (action) async {
-              switch (action) {
-                case _SongAction.edit:
-                  await showSongEditDialog(context, ref, song);
-                case _SongAction.hide:
-                  await ref.read(songRepositoryProvider).setHidden(song.id, true);
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: _SongAction.edit, child: Text('Edit')),
-              PopupMenuItem(value: _SongAction.hide, child: Text('Hide')),
-            ],
-          ),
+      trailing: PopupMenuButton<_SongAction>(
+        icon: const Icon(Icons.more_vert),
+        padding: EdgeInsets.zero,
+        onSelected: (action) async {
+          switch (action) {
+            case _SongAction.edit:
+              await showSongEditDialog(context, ref, song);
+            case _SongAction.hide:
+              await ref.read(songRepositoryProvider).setHidden(song.id, true);
+          }
+        },
+        itemBuilder: (context) => const [
+          PopupMenuItem(value: _SongAction.edit, child: Text('Edit')),
+          PopupMenuItem(value: _SongAction.hide, child: Text('Hide')),
         ],
       ),
       onTap: () => Navigator.of(context, rootNavigator: true).push(

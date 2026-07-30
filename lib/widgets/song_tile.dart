@@ -23,36 +23,32 @@ class SongTile extends StatelessWidget {
     final durationLabel = song.durationMs != null
         ? _formatDuration(Duration(milliseconds: song.durationMs!))
         : null;
+    final hasArtist = song.artist?.isNotEmpty ?? false;
+    final metaLabel =
+        [?durationLabel, bpm != null ? '${bpm.round()} BPM' : '-- BPM'].join(' \u2022 ');
 
     return ListTile(
       onTap: onTap,
       leading: leading ?? const CircleAvatar(child: Icon(Icons.music_note)),
       title: Text(song.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text(
-        [
-          if (song.artist?.isNotEmpty ?? false) song.artist,
-          ?durationLabel,
-        ].join(' \u2022 '),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: trailing ??
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  bpm != null ? '${bpm.round()} BPM' : '-- BPM',
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-                if (isManualBpm) ...[
-                  const SizedBox(width: 4),
-                  const Icon(Icons.edit, size: 14),
-                ],
-              ],
+      // The artist name is the flexible part here: it's the one truncated
+      // (with an ellipsis) when the row is too narrow, so duration/BPM -
+      // the fixed-width tail - stays visible under any circumstances.
+      subtitle: Row(
+        children: [
+          if (hasArtist)
+            Expanded(
+              child: Text(song.artist!, maxLines: 1, overflow: TextOverflow.ellipsis),
             ),
-          ),
+          if (hasArtist) const Text(' \u2022 '),
+          Text(metaLabel, maxLines: 1, overflow: TextOverflow.ellipsis),
+          if (isManualBpm) ...[
+            const SizedBox(width: 4),
+            const Icon(Icons.edit, size: 12),
+          ],
+        ],
+      ),
+      trailing: trailing,
     );
   }
 

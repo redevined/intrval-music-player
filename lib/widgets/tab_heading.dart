@@ -13,9 +13,15 @@ class TabHeading extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.asset('assets/app_icon.png', width: 32, height: 32),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Theme.of(context).colorScheme.primary, width: 1.5),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(6.5),
+            child: Image.asset('assets/app_icon.png', width: 32, height: 32),
+          ),
         ),
         const SizedBox(width: 12),
         Text(title),
