@@ -122,8 +122,10 @@ class PlaylistListScreen extends ConsumerWidget {
                                         : () => Navigator.of(context, rootNavigator: true)
                                                 .push(
                                               MaterialPageRoute(
-                                                builder: (_) =>
-                                                    StandardPlayerScreen(songs: songs!),
+                                                builder: (_) => StandardPlayerScreen(
+                                                  songs: songs!,
+                                                  queueTitle: playlist.name,
+                                                ),
                                               ),
                                             ),
                                   ),

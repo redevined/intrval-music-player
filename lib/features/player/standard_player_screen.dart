@@ -19,10 +19,19 @@ import 'player_shell.dart';
 /// timed dance-set sequencing, which owns the audio handler exclusively
 /// while active.
 class StandardPlayerScreen extends ConsumerStatefulWidget {
-  const StandardPlayerScreen({super.key, this.songs, this.initialIndex = 0});
+  const StandardPlayerScreen({
+    super.key,
+    this.songs,
+    this.initialIndex = 0,
+    this.queueTitle,
+  });
 
   final List<Song>? songs;
   final int initialIndex;
+
+  /// Name of the playlist this queue was started from, shown as the app bar
+  /// title instead of the generic "Now Playing". Null for library playback.
+  final String? queueTitle;
 
   @override
   ConsumerState<StandardPlayerScreen> createState() => _StandardPlayerScreenState();
@@ -35,7 +44,9 @@ class _StandardPlayerScreenState extends ConsumerState<StandardPlayerScreen> {
     final songs = widget.songs;
     if (songs != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(nowPlayingProvider.notifier).playQueue(songs, widget.initialIndex);
+        ref
+            .read(nowPlayingProvider.notifier)
+            .playQueue(songs, widget.initialIndex, queueTitle: widget.queueTitle);
       });
     }
   }
@@ -56,7 +67,7 @@ class _StandardPlayerScreenState extends ConsumerState<StandardPlayerScreen> {
     final controller = ref.read(nowPlayingProvider.notifier);
 
     return PlayerShell(
-      appBarTitle: 'Now Playing',
+      appBarTitle: nowPlaying.queueTitle ?? 'Now Playing',
       artwork: PlayerArtwork(
         badge: nowPlaying.tempoPercent != 100
             ? Text('${nowPlaying.tempoPercent}% tempo')

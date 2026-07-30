@@ -13,6 +13,7 @@ class SeekBar extends StatefulWidget {
     required this.duration,
     this.onSeek,
     this.remainingAsCountdown = false,
+    this.stopAt,
   });
 
   final Duration position;
@@ -21,6 +22,12 @@ class SeekBar extends StatefulWidget {
 
   /// Shows the trailing label as `-m:ss` time-left instead of total length.
   final bool remainingAsCountdown;
+
+  /// Optional marker drawn on the track at this position - the point where
+  /// playback will be cut off (e.g. a practice set entry's play-duration
+  /// limit). Recompute this from the caller on every tick so it tracks a
+  /// seek instead of staying pinned to the original position.
+  final Duration? stopAt;
 
   @override
   State<SeekBar> createState() => _SeekBarState();
@@ -55,6 +62,12 @@ class _SeekBarState extends State<SeekBar> {
             // it doubles as the primary progress readout for the screen.
             trackHeight: 6,
             thumbSize: const WidgetStatePropertyAll(Size(4, 22)),
+            trackShape: _MarkedSliderTrackShape(
+              markerFraction: widget.stopAt == null
+                  ? null
+                  : (widget.stopAt!.inMilliseconds / maxMs).clamp(0.0, 1.0),
+              markerColor: theme.colorScheme.error,
+            ),
           ),
           child: Slider(
             value: valueMs.toDouble(),
@@ -87,5 +100,67 @@ class _SeekBarState extends State<SeekBar> {
     final m = clamped.inMinutes;
     final s = clamped.inSeconds % 60;
     return '$m:${s.toString().padLeft(2, '0')}';
+  }
+}
+
+/// Draws the normal Material track, then an extra vertical tick at
+/// [markerFraction] (0-1 along the track) - used to show where playback will
+/// be cut off. Extends the default shape (rather than painting independently
+/// on top via a Stack) so the tick uses the exact same track rect the real
+/// track is drawn in, including thumb/overlay insets.
+class _MarkedSliderTrackShape extends RoundedRectSliderTrackShape {
+  const _MarkedSliderTrackShape({required this.markerFraction, required this.markerColor});
+
+  final double? markerFraction;
+  final Color markerColor;
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset offset, {
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required Animation<double> enableAnimation,
+    required TextDirection textDirection,
+    required Offset thumbCenter,
+    Offset? secondaryOffset,
+    bool isDiscrete = false,
+    bool isEnabled = false,
+    double additionalActiveTrackHeight = 2,
+  }) {
+    super.paint(
+      context,
+      offset,
+      parentBox: parentBox,
+      sliderTheme: sliderTheme,
+      enableAnimation: enableAnimation,
+      textDirection: textDirection,
+      thumbCenter: thumbCenter,
+      secondaryOffset: secondaryOffset,
+      isDiscrete: isDiscrete,
+      isEnabled: isEnabled,
+      additionalActiveTrackHeight: additionalActiveTrackHeight,
+    );
+
+    final fraction = markerFraction;
+    if (fraction == null) return;
+
+    final trackRect = getPreferredRect(
+      parentBox: parentBox,
+      offset: offset,
+      sliderTheme: sliderTheme,
+      isEnabled: isEnabled,
+      isDiscrete: isDiscrete,
+    );
+    final dx = trackRect.left + trackRect.width * fraction;
+    final paint = Paint()
+      ..color = markerColor
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    context.canvas.drawLine(
+      Offset(dx, trackRect.top - 5),
+      Offset(dx, trackRect.bottom + 5),
+      paint,
+    );
   }
 }

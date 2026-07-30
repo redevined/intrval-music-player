@@ -49,6 +49,7 @@ class PracticeSessionState {
     this.breakSecondsRemaining = 0,
     this.breakTotalSeconds = 0,
     this.paused = false,
+    this.cutoffRemainingSeconds,
   });
 
   final PracticeSet practiceSet;
@@ -64,6 +65,11 @@ class PracticeSessionState {
   final int breakSecondsRemaining;
   final int breakTotalSeconds;
   final bool paused;
+
+  /// Seconds left before the current song is faded out and cut off, ticking
+  /// down only while actually playing (frozen while paused). Null outside
+  /// [SessionPhase.playing].
+  final int? cutoffRemainingSeconds;
 
   ResolvedSetEntry? get currentEntry =>
       entryIndex >= 0 && entryIndex < entries.length ? entries[entryIndex] : null;
@@ -87,6 +93,8 @@ class PracticeSessionState {
     int? breakSecondsRemaining,
     int? breakTotalSeconds,
     bool? paused,
+    int? cutoffRemainingSeconds,
+    bool clearCutoffRemaining = false,
   }) {
     return PracticeSessionState(
       practiceSet: practiceSet ?? this.practiceSet,
@@ -98,6 +106,9 @@ class PracticeSessionState {
       breakSecondsRemaining: breakSecondsRemaining ?? this.breakSecondsRemaining,
       breakTotalSeconds: breakTotalSeconds ?? this.breakTotalSeconds,
       paused: paused ?? this.paused,
+      cutoffRemainingSeconds: clearCutoffRemaining
+          ? null
+          : (cutoffRemainingSeconds ?? this.cutoffRemainingSeconds),
     );
   }
 }
@@ -117,7 +128,7 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
   final Ref _ref;
   final _random = Random();
 
-  Timer? _cutoffTimer;
+  Timer? _playTicker;
   Timer? _breakTicker;
 
   /// Guards against a stale timer/callback from a previous entry (or a
@@ -126,7 +137,7 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
 
   @override
   void dispose() {
-    _cutoffTimer?.cancel();
+    _playTicker?.cancel();
     _breakTicker?.cancel();
     super.dispose();
   }
@@ -135,7 +146,7 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
   /// already using the shared audio handler.
   Future<void> start(PracticeSet practiceSet) async {
     _generation++;
-    _cutoffTimer?.cancel();
+    _playTicker?.cancel();
     _breakTicker?.cancel();
 
     // The mini-player would otherwise show a stale ad-hoc queue and fight
@@ -237,17 +248,44 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
     // stops/pauses/completes, so it must not be awaited here.
     unawaited(handler.play());
 
-    state = state?.copyWith(phase: SessionPhase.playing, currentSong: song);
+    state = state?.copyWith(
+      phase: SessionPhase.playing,
+      currentSong: song,
+      cutoffRemainingSeconds: resolved.playDurationSeconds,
+    );
 
-    _cutoffTimer?.cancel();
-    _cutoffTimer = Timer(Duration(seconds: resolved.playDurationSeconds), () async {
-      if (generation != _generation) return;
-      if (state?.phase != SessionPhase.playing) return;
-      await _ref
-          .read(audioHandlerProvider)
-          .fadeOutAndStop(Duration(seconds: resolved.fadeOutSeconds));
-      if (generation != _generation) return;
-      _startBreak();
+    _startPlayTicker(generation, resolved);
+  }
+
+  /// Counts down the current entry's play-time cutoff a second at a time -
+  /// mirroring [_startBreak]'s ticker - so it can be frozen while paused
+  /// instead of firing on real wall-clock time regardless of playback state.
+  void _startPlayTicker(int generation, ResolvedSetEntry resolved) {
+    _playTicker?.cancel();
+    _playTicker = Timer.periodic(const Duration(seconds: 1), (timer) async {
+      if (generation != _generation) {
+        timer.cancel();
+        return;
+      }
+      final current = state;
+      if (current == null || current.phase != SessionPhase.playing) {
+        timer.cancel();
+        return;
+      }
+      if (current.paused) return;
+
+      final remaining = (current.cutoffRemainingSeconds ?? 0) - 1;
+      if (remaining <= 0) {
+        timer.cancel();
+        state = current.copyWith(cutoffRemainingSeconds: 0);
+        await _ref
+            .read(audioHandlerProvider)
+            .fadeOutAndStop(Duration(seconds: resolved.fadeOutSeconds));
+        if (generation != _generation) return;
+        _startBreak();
+      } else {
+        state = current.copyWith(cutoffRemainingSeconds: remaining);
+      }
     });
   }
 
@@ -261,7 +299,7 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
 
   void _onTrackNaturalEnd() {
     if (state?.phase != SessionPhase.playing) return;
-    _cutoffTimer?.cancel();
+    _playTicker?.cancel();
     _startBreak();
   }
 
@@ -269,12 +307,21 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
     final s = state;
     final resolved = s?.currentEntry;
     if (s == null || resolved == null) return;
+
+    // The set runs forward only - a break after the last entry would just
+    // be dead air before the completion screen, so skip straight there.
+    if (s.entryIndex >= s.entries.length - 1) {
+      _advance();
+      return;
+    }
+
     final generation = ++_generation;
 
     state = s.copyWith(
       phase: SessionPhase.breaking,
       breakSecondsRemaining: resolved.breakSeconds,
       breakTotalSeconds: resolved.breakSeconds,
+      clearCutoffRemaining: true,
     );
 
     if (resolved.breakCueMode == BreakCueMode.ambientSong &&
@@ -334,7 +381,7 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
       _playEntry(s.entryIndex + 1);
     } else {
       _generation++;
-      _cutoffTimer?.cancel();
+      _playTicker?.cancel();
       _breakTicker?.cancel();
       state = s.copyWith(phase: SessionPhase.complete, clearCurrentSong: true);
     }
@@ -359,7 +406,7 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
   void skip() {
     final s = state;
     if (s == null) return;
-    _cutoffTimer?.cancel();
+    _playTicker?.cancel();
     _breakTicker?.cancel();
     _ref.read(audioHandlerProvider).stop();
     _advance();
@@ -383,7 +430,7 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
   Future<void> stop() async {
     if (state == null) return;
     _generation++;
-    _cutoffTimer?.cancel();
+    _playTicker?.cancel();
     _breakTicker?.cancel();
     state = null;
     await _ref.read(audioHandlerProvider).stop();

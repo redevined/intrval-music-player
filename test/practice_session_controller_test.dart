@@ -137,7 +137,8 @@ void main() {
   });
 
   test('a track ending naturally starts the entry break', () async {
-    final set = await harness.createSetWithEntries(['Waltz'], breakSeconds: 25);
+    final set =
+        await harness.createSetWithEntries(['Waltz', 'Tango'], breakSeconds: 25);
     await controller().start(set);
 
     // The handler reports completion the way just_audio would.
@@ -148,6 +149,17 @@ void main() {
     expect(s.phase, SessionPhase.breaking);
     expect(s.breakSecondsRemaining, 25);
     expect(s.breakTotalSeconds, 25);
+  });
+
+  test('the last entry never gets a break - it completes straight away',
+      () async {
+    final set = await harness.createSetWithEntries(['Waltz'], breakSeconds: 25);
+    await controller().start(set);
+
+    handler.onTrackComplete!();
+    await pumpEventQueue();
+
+    expect(session()!.phase, SessionPhase.complete);
   });
 
   test('session state outlives its listeners, so leaving the screen keeps it',
@@ -192,6 +204,27 @@ void main() {
     await pumpEventQueue();
     expect(session()!.paused, isFalse);
     expect(handler.playing, isTrue);
+  });
+
+  test('pausing freezes the cutoff countdown instead of it draining in the background',
+      () async {
+    final set =
+        await harness.createSetWithEntries(['Waltz'], playDurationSeconds: 5);
+    await controller().start(set);
+    expect(session()!.cutoffRemainingSeconds, 5);
+
+    await Future<void>.delayed(const Duration(milliseconds: 1100));
+    final afterOneTick = session()!.cutoffRemainingSeconds!;
+    expect(afterOneTick, lessThan(5));
+
+    controller().togglePause();
+    await Future<void>.delayed(const Duration(milliseconds: 1100));
+    // Frozen while paused - must not have ticked down further.
+    expect(session()!.cutoffRemainingSeconds, afterOneTick);
+
+    controller().togglePause();
+    await Future<void>.delayed(const Duration(milliseconds: 1100));
+    expect(session()!.cutoffRemainingSeconds, lessThan(afterOneTick));
   });
 
   test('stop clears the session and releases the handler', () async {
@@ -242,6 +275,7 @@ class PracticeSetRepositoryHarness {
     List<String> entryLabels, {
     int? breakSeconds,
     int? tempoPercent,
+    int? playDurationSeconds,
     bool emptyFirstEntry = false,
   }) async {
     final songs = _container.read(songRepositoryProvider);
@@ -263,7 +297,7 @@ class PracticeSetRepositoryHarness {
         label: entryLabels[i],
         playlistId: useEmpty ? emptyPlaylistId : playlistId,
       );
-      if (breakSeconds != null || tempoPercent != null) {
+      if (breakSeconds != null || tempoPercent != null || playDurationSeconds != null) {
         await sets.updateEntry(
           entryId,
           SetEntriesCompanion(
@@ -271,6 +305,9 @@ class PracticeSetRepositoryHarness {
                 breakSeconds != null ? Value(breakSeconds) : const Value.absent(),
             tempoPercent:
                 tempoPercent != null ? Value(tempoPercent) : const Value.absent(),
+            playDurationSeconds: playDurationSeconds != null
+                ? Value(playDurationSeconds)
+                : const Value.absent(),
           ),
         );
       }

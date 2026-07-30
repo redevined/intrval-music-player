@@ -82,6 +82,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         IconButton(
           tooltip: 'End session',
           icon: const Icon(Icons.stop_circle_outlined),
+          iconSize: 32,
           onPressed: () async {
             await controller.stop();
             if (context.mounted) Navigator.of(context).maybePop();
@@ -91,9 +92,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       artwork: PlayerArtwork(
         icon: breaking ? Icons.self_improvement : Icons.music_note,
         dimmed: breaking,
-        badge: Text(
-          breaking ? 'Break' : '${session.tempoPercent}% tempo',
-        ),
+        badge: breaking ? const Text('Break') : null,
       ),
       contextHeader: entry == null
           ? null
@@ -117,10 +116,21 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
           : StreamBuilder<Duration>(
               stream: handler.positionStream,
               builder: (context, snapshot) {
+                final position = snapshot.data ?? Duration.zero;
+                final duration = handler.duration ?? Duration.zero;
+                final cutoffRemaining = session.cutoffRemainingSeconds;
+                final stopAt = cutoffRemaining == null
+                    ? null
+                    : position + Duration(seconds: cutoffRemaining);
                 return SeekBar(
-                  position: snapshot.data ?? Duration.zero,
-                  duration: handler.duration ?? Duration.zero,
+                  position: position,
+                  duration: duration,
                   onSeek: handler.seek,
+                  // Only worth showing if the cutoff would actually fire
+                  // before the song ends naturally on its own.
+                  stopAt: stopAt != null && duration > Duration.zero && stopAt < duration
+                      ? stopAt
+                      : null,
                 );
               },
             ),
@@ -171,17 +181,21 @@ class _EntryHeader extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: colors.secondaryContainer,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Text(
-            label,
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: colors.onSecondaryContainer,
-              fontWeight: FontWeight.w600,
+        Flexible(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: colors.secondaryContainer,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              label,
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: colors.onSecondaryContainer,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ),

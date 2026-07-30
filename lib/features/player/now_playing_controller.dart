@@ -16,11 +16,16 @@ class NowPlayingState {
     required this.songs,
     required this.index,
     required this.tempoPercent,
+    this.queueTitle,
   });
 
   final List<Song> songs;
   final int index;
   final int tempoPercent;
+
+  /// Name of the playlist/source this queue was started from, e.g. shown as
+  /// the player's app bar title. Null for a plain library queue.
+  final String? queueTitle;
 
   Song get currentSong => songs[index];
   bool get hasNext => index < songs.length - 1;
@@ -31,6 +36,7 @@ class NowPlayingState {
       songs: songs,
       index: index ?? this.index,
       tempoPercent: tempoPercent ?? this.tempoPercent,
+      queueTitle: queueTitle,
     );
   }
 }
@@ -52,7 +58,7 @@ class NowPlayingController extends StateNotifier<NowPlayingState?> {
     _ref.read(audioHandlerProvider).onTrackComplete = _onTrackComplete;
   }
 
-  Future<void> playQueue(List<Song> songs, int initialIndex) async {
+  Future<void> playQueue(List<Song> songs, int initialIndex, {String? queueTitle}) async {
     if (songs.isEmpty) return;
     // Ad-hoc playback and a timed practice set can't share the one audio
     // handler, so starting a queue ends any running session.
@@ -61,6 +67,7 @@ class NowPlayingController extends StateNotifier<NowPlayingState?> {
       songs: songs,
       index: initialIndex,
       tempoPercent: AppDefaults.tempoPercent,
+      queueTitle: queueTitle,
     );
     _attachTrackCompleteHandler();
     await _loadCurrent();

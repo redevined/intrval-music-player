@@ -155,8 +155,10 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                 ? null
                 : () => Navigator.of(context, rootNavigator: true).push(
                       MaterialPageRoute(
-                        builder: (_) =>
-                            StandardPlayerScreen(songs: songsAsync.valueOrNull!),
+                        builder: (_) => StandardPlayerScreen(
+                          songs: songsAsync.valueOrNull!,
+                          queueTitle: widget.playlist.name,
+                        ),
                       ),
                     ),
             child: const Icon(Icons.play_arrow),
@@ -211,7 +213,11 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
       ),
       onTap: () => Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(
-          builder: (_) => StandardPlayerScreen(songs: songs, initialIndex: i),
+          builder: (_) => StandardPlayerScreen(
+            songs: songs,
+            initialIndex: i,
+            queueTitle: widget.playlist.name,
+          ),
         ),
       ),
     );
