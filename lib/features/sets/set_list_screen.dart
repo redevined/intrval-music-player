@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
+import '../../widgets/sort_app_bar_actions.dart';
 import '../../widgets/tab_heading.dart';
 import '../player/practice_session_screen.dart';
 import 'set_builder_screen.dart';
@@ -60,21 +61,13 @@ class SetListScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const TabHeading('Practice Sets'),
         actions: [
-          IconButton(
-            tooltip: ref.watch(setSortAscendingProvider) ? 'Ascending' : 'Descending',
-            icon: Icon(
-              ref.watch(setSortAscendingProvider)
-                  ? Icons.arrow_upward
-                  : Icons.arrow_downward,
-            ),
-            onPressed: () => ref.read(setSortAscendingProvider.notifier).state =
+          SortAppBarActions<SetSortField>(
+            ascending: ref.watch(setSortAscendingProvider),
+            onToggleAscending: () => ref.read(setSortAscendingProvider.notifier).state =
                 !ref.read(setSortAscendingProvider),
-          ),
-          PopupMenuButton<SetSortField>(
-            icon: const Icon(Icons.sort),
-            initialValue: ref.watch(setSortProvider),
-            onSelected: (v) => ref.read(setSortProvider.notifier).state = v,
-            itemBuilder: (context) => const [
+            sortValue: ref.watch(setSortProvider),
+            onSortSelected: (v) => ref.read(setSortProvider.notifier).state = v,
+            items: const [
               PopupMenuItem(value: SetSortField.name, child: Text('Name')),
               PopupMenuItem(
                 value: SetSortField.dateCreated,

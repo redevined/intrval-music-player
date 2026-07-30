@@ -6,6 +6,7 @@ import '../../data/providers.dart';
 import '../../data/repositories/song_repository.dart';
 import '../../widgets/song_edit_dialog.dart';
 import '../../widgets/song_tile.dart';
+import '../../widgets/sort_app_bar_actions.dart';
 import '../../widgets/tab_heading.dart';
 import '../player/standard_player_screen.dart';
 
@@ -64,21 +65,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       appBar: AppBar(
         title: const TabHeading('Library'),
         actions: [
-          IconButton(
-            tooltip: ref.watch(librarySortAscendingProvider) ? 'Ascending' : 'Descending',
-            icon: Icon(
-              ref.watch(librarySortAscendingProvider)
-                  ? Icons.arrow_upward
-                  : Icons.arrow_downward,
-            ),
-            onPressed: () => ref.read(librarySortAscendingProvider.notifier).state =
+          SortAppBarActions<SongSortField>(
+            ascending: ref.watch(librarySortAscendingProvider),
+            onToggleAscending: () => ref.read(librarySortAscendingProvider.notifier).state =
                 !ref.read(librarySortAscendingProvider),
-          ),
-          PopupMenuButton<SongSortField>(
-            icon: const Icon(Icons.sort),
-            initialValue: ref.watch(librarySortProvider),
-            onSelected: (v) => ref.read(librarySortProvider.notifier).state = v,
-            itemBuilder: (context) => SongSortField.values
+            sortValue: ref.watch(librarySortProvider),
+            onSortSelected: (v) => ref.read(librarySortProvider.notifier).state = v,
+            items: SongSortField.values
                 .map((f) => PopupMenuItem(value: f, child: Text(_sortLabel(f))))
                 .toList(),
           ),

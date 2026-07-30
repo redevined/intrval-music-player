@@ -7,6 +7,7 @@ import '../../core/constants.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
 import '../../data/repositories/app_settings_repository.dart';
+import '../../widgets/labeled_slider.dart';
 import '../../widgets/tab_heading.dart';
 import '../library/library_screen.dart' show librarySongsProvider;
 import 'hidden_songs_screen.dart';
@@ -153,7 +154,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         children: [
           const _SectionHeader('New set defaults'),
-          _SliderSetting(
+          LabeledSlider(
             label: 'Tempo',
             valueLabel: '${defaults.tempoPercent}%',
             value: defaults.tempoPercent.toDouble(),
@@ -162,7 +163,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             divisions: TempoLimits.maxPercent - TempoLimits.minPercent,
             onChanged: (v) => _updateDefaults(defaults.copyWith(tempoPercent: v.round())),
           ),
-          _SliderSetting(
+          LabeledSlider(
             label: 'Play duration',
             valueLabel: '${defaults.playDurationSeconds}s',
             value: defaults.playDurationSeconds.toDouble(),
@@ -172,7 +173,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onChanged: (v) =>
                 _updateDefaults(defaults.copyWith(playDurationSeconds: v.round())),
           ),
-          _SliderSetting(
+          LabeledSlider(
             label: 'Break',
             valueLabel: '${defaults.breakSeconds}s',
             value: defaults.breakSeconds.toDouble(),
@@ -181,7 +182,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             divisions: 24,
             onChanged: (v) => _updateDefaults(defaults.copyWith(breakSeconds: v.round())),
           ),
-          _SliderSetting(
+          LabeledSlider(
             label: 'Fade-out at cutoff',
             valueLabel: '${defaults.fadeOutSeconds}s',
             value: defaults.fadeOutSeconds.toDouble(),
@@ -215,7 +216,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
           if (defaults.breakCueMode == BreakCueMode.beepBeforeEnd)
-            _SliderSetting(
+            LabeledSlider(
               label: 'Beep lead time',
               valueLabel: '${defaults.beepLeadSeconds}s before next song',
               value: defaults.beepLeadSeconds.toDouble().clamp(0, defaults.breakSeconds.toDouble()),
@@ -319,48 +320,3 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _SliderSetting extends StatelessWidget {
-  const _SliderSetting({
-    required this.label,
-    required this.valueLabel,
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.onChanged,
-    this.divisions,
-  });
-
-  final String label;
-  final String valueLabel;
-  final double value;
-  final double min;
-  final double max;
-  final int? divisions;
-  final ValueChanged<double> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(label, style: Theme.of(context).textTheme.bodyLarge),
-              Text(valueLabel, style: Theme.of(context).textTheme.bodyMedium),
-            ],
-          ),
-          Slider(
-            value: value.clamp(min, max),
-            min: min,
-            max: max,
-            divisions: divisions,
-            onChanged: onChanged,
-          ),
-        ],
-      ),
-    );
-  }
-}

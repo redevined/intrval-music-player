@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
+import '../../widgets/labeled_slider.dart';
 import '../library/library_screen.dart';
 import '../player/practice_session_screen.dart';
 import '../playlists/playlist_list_screen.dart';
@@ -171,24 +172,30 @@ class SetBuilderScreen extends ConsumerWidget {
                   decoration: const InputDecoration(labelText: 'Label'),
                 ),
                 const SizedBox(height: 16),
-                Text('Tempo override: ${tempoPercent ?? "inherit"}${tempoPercent != null ? "%" : ""}'),
-                Slider(
+                LabeledSlider(
+                  padding: EdgeInsets.zero,
+                  label: 'Tempo override',
+                  valueLabel: tempoPercent == null ? 'inherit' : '$tempoPercent%',
                   value: (tempoPercent ?? AppDefaults.tempoPercent).toDouble(),
                   min: TempoLimits.minPercent.toDouble(),
                   max: TempoLimits.maxPercent.toDouble(),
                   divisions: TempoLimits.maxPercent - TempoLimits.minPercent,
                   onChanged: (v) => setState(() => tempoPercent = v.round()),
                 ),
-                Text('Play duration override: ${playSeconds ?? "inherit"}${playSeconds != null ? "s" : ""}'),
-                Slider(
+                LabeledSlider(
+                  padding: EdgeInsets.zero,
+                  label: 'Play duration override',
+                  valueLabel: playSeconds == null ? 'inherit' : '${playSeconds}s',
                   value: (playSeconds ?? AppDefaults.playDurationSeconds).toDouble(),
                   min: 15,
                   max: 300,
                   divisions: 57,
                   onChanged: (v) => setState(() => playSeconds = v.round()),
                 ),
-                Text('Break override: ${breakSeconds ?? "inherit"}${breakSeconds != null ? "s" : ""}'),
-                Slider(
+                LabeledSlider(
+                  padding: EdgeInsets.zero,
+                  label: 'Break override',
+                  valueLabel: breakSeconds == null ? 'inherit' : '${breakSeconds}s',
                   value: (breakSeconds ?? AppDefaults.breakSeconds).toDouble(),
                   min: 0,
                   max: 120,
@@ -247,32 +254,40 @@ class SetBuilderScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Tempo: $tempo%'),
-              Slider(
+              LabeledSlider(
+                padding: EdgeInsets.zero,
+                label: 'Tempo',
+                valueLabel: '$tempo%',
                 value: tempo.toDouble(),
                 min: TempoLimits.minPercent.toDouble(),
                 max: TempoLimits.maxPercent.toDouble(),
                 divisions: TempoLimits.maxPercent - TempoLimits.minPercent,
                 onChanged: (v) => setState(() => tempo = v.round()),
               ),
-              Text('Play duration: ${play}s'),
-              Slider(
+              LabeledSlider(
+                padding: EdgeInsets.zero,
+                label: 'Play duration',
+                valueLabel: '${play}s',
                 value: play.toDouble(),
                 min: 15,
                 max: 300,
                 divisions: 57,
                 onChanged: (v) => setState(() => play = v.round()),
               ),
-              Text('Break: ${brk}s'),
-              Slider(
+              LabeledSlider(
+                padding: EdgeInsets.zero,
+                label: 'Break',
+                valueLabel: '${brk}s',
                 value: brk.toDouble(),
                 min: 0,
                 max: 120,
                 divisions: 24,
                 onChanged: (v) => setState(() => brk = v.round()),
               ),
-              Text('Fade-out at cutoff: ${fade}s'),
-              Slider(
+              LabeledSlider(
+                padding: EdgeInsets.zero,
+                label: 'Fade-out at cutoff',
+                valueLabel: '${fade}s',
                 value: fade.toDouble(),
                 min: 0,
                 max: 10,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
+import '../../widgets/sort_app_bar_actions.dart';
 import '../../widgets/tab_heading.dart';
 import '../player/standard_player_screen.dart';
 import 'playlist_detail_screen.dart';
@@ -62,21 +63,13 @@ class PlaylistListScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const TabHeading('Playlists'),
         actions: [
-          IconButton(
-            tooltip: ref.watch(playlistSortAscendingProvider) ? 'Ascending' : 'Descending',
-            icon: Icon(
-              ref.watch(playlistSortAscendingProvider)
-                  ? Icons.arrow_upward
-                  : Icons.arrow_downward,
-            ),
-            onPressed: () => ref.read(playlistSortAscendingProvider.notifier).state =
+          SortAppBarActions<PlaylistSortField>(
+            ascending: ref.watch(playlistSortAscendingProvider),
+            onToggleAscending: () => ref.read(playlistSortAscendingProvider.notifier).state =
                 !ref.read(playlistSortAscendingProvider),
-          ),
-          PopupMenuButton<PlaylistSortField>(
-            icon: const Icon(Icons.sort),
-            initialValue: ref.watch(playlistSortProvider),
-            onSelected: (v) => ref.read(playlistSortProvider.notifier).state = v,
-            itemBuilder: (context) => const [
+            sortValue: ref.watch(playlistSortProvider),
+            onSortSelected: (v) => ref.read(playlistSortProvider.notifier).state = v,
+            items: const [
               PopupMenuItem(value: PlaylistSortField.name, child: Text('Name')),
               PopupMenuItem(
                 value: PlaylistSortField.dateCreated,
