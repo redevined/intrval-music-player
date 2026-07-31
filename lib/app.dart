@@ -1,7 +1,9 @@
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme.dart';
+import 'data/providers.dart';
 import 'features/library/library_screen.dart';
 import 'features/playlists/playlist_list_screen.dart';
 import 'features/sets/set_list_screen.dart';
@@ -13,11 +15,20 @@ class IntrvalApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final themeSeedOption = ref.watch(themeSeedProvider);
+    final corePalette = ref.watch(systemCorePaletteProvider).valueOrNull;
+
     return MaterialApp(
       title: 'intrval',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
+      theme: AppTheme.light(
+        themeSeedOption,
+        systemScheme: corePalette?.toColorScheme(brightness: Brightness.light),
+      ),
+      darkTheme: AppTheme.dark(
+        themeSeedOption,
+        systemScheme: corePalette?.toColorScheme(brightness: Brightness.dark),
+      ),
       home: const HomeShell(),
     );
   }
@@ -33,8 +44,10 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
-  final List<GlobalKey<NavigatorState>> _navigatorKeys =
-      List.generate(4, (_) => GlobalKey<NavigatorState>());
+  final List<GlobalKey<NavigatorState>> _navigatorKeys = List.generate(
+    4,
+    (_) => GlobalKey<NavigatorState>(),
+  );
 
   static const _screens = [
     LibraryScreen(),
@@ -49,9 +62,8 @@ class _HomeShellState extends State<HomeShell> {
   Widget _buildTab(int index) {
     return Navigator(
       key: _navigatorKeys[index],
-      onGenerateRoute: (settings) => MaterialPageRoute(
-        builder: (_) => _screens[index],
-      ),
+      onGenerateRoute: (settings) =>
+          MaterialPageRoute(builder: (_) => _screens[index]),
     );
   }
 
@@ -80,15 +92,28 @@ class _HomeShellState extends State<HomeShell> {
             NavigationBar(
               selectedIndex: _index,
               onDestinationSelected: (i) {
-                _navigatorKeys[i].currentState
-                    ?.popUntil((route) => route.isFirst);
+                _navigatorKeys[i].currentState?.popUntil(
+                  (route) => route.isFirst,
+                );
                 setState(() => _index = i);
               },
               destinations: const [
-                NavigationDestination(icon: Icon(Icons.library_music), label: 'Library'),
-                NavigationDestination(icon: Icon(Icons.queue_music), label: 'Playlists'),
-                NavigationDestination(icon: Icon(Icons.timelapse), label: 'Sets'),
-                NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
+                NavigationDestination(
+                  icon: Icon(Icons.library_music),
+                  label: 'Library',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.queue_music),
+                  label: 'Playlists',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.timelapse),
+                  label: 'Sets',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.settings),
+                  label: 'Settings',
+                ),
               ],
             ),
           ],

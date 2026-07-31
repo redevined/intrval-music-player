@@ -68,6 +68,14 @@ dependencies:
   package_info_plus: ^8.1.0
   url_launcher: ^6.3.1
 
+  # System (Material You / Android 12+) seed color, for the app-icon
+  # theme-cycling easter egg - see core/theme.dart. material_color_utilities
+  # is a transitive dependency of dynamic_color already, but CorePalette
+  # (its return type for DynamicColorPlugin.getCorePalette()) needs to be
+  # importable directly.
+  dynamic_color: ^1.8.1
+  material_color_utilities: ^0.13.0
+
 # jni 1.0.1 (a transitive dep of path_provider_android, pulled in regardless
 # of the sqlite3 version) shipped a breaking Kotlin Gradle Plugin migration in
 # its android/build.gradle that fails with "Could not find method kotlin()"

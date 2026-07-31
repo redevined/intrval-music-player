@@ -3,6 +3,7 @@ import 'package:saf/saf.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants.dart';
+import '../../core/theme.dart' show ThemeSeedOption;
 import '../../services/file_import_service.dart';
 import '../database/database.dart' show BreakCueMode;
 
@@ -46,6 +47,7 @@ class AppSettingsRepository {
   static const _kFade = 'fade_out_seconds';
   static const _kBreakCueMode = 'break_cue_mode';
   static const _kMusicRootFolder = 'music_root_folder';
+  static const _kThemeSeedOption = 'theme_seed_option';
 
   String get musicRootFolder =>
       _prefs.getString(_kMusicRootFolder) ?? AppDefaults.musicRootFolder;
@@ -64,11 +66,11 @@ class AppSettingsRepository {
   }
 
   SetDefaults get setDefaults => SetDefaults(
-        tempoPercent: _prefs.getInt(_kTempo) ?? AppDefaults.tempoPercent,
-        playDurationSeconds:
-            _prefs.getInt(_kPlay) ?? AppDefaults.playDurationSeconds,
-        breakSeconds: _prefs.getInt(_kBreak) ?? AppDefaults.breakSeconds,
-      );
+    tempoPercent: _prefs.getInt(_kTempo) ?? AppDefaults.tempoPercent,
+    playDurationSeconds:
+        _prefs.getInt(_kPlay) ?? AppDefaults.playDurationSeconds,
+    breakSeconds: _prefs.getInt(_kBreak) ?? AppDefaults.breakSeconds,
+  );
 
   Future<void> saveSetDefaults(SetDefaults d) async {
     await _prefs.setInt(_kTempo, d.tempoPercent);
@@ -89,6 +91,19 @@ class AppSettingsRepository {
 
   Future<void> saveFadeOutSeconds(int seconds) =>
       _prefs.setInt(_kFade, seconds);
+
+  /// The app-icon theme-cycling easter egg's current choice - see
+  /// [ThemeSeedOption].
+  ThemeSeedOption get themeSeedOption {
+    final raw = _prefs.getString(_kThemeSeedOption);
+    return ThemeSeedOption.values.firstWhere(
+      (o) => o.name == raw,
+      orElse: () => ThemeSeedOption.green,
+    );
+  }
+
+  Future<void> saveThemeSeedOption(ThemeSeedOption option) =>
+      _prefs.setString(_kThemeSeedOption, option.name);
 }
 
 class SetDefaultsController extends StateNotifier<SetDefaults> {
@@ -128,5 +143,25 @@ class FadeOutSecondsController extends StateNotifier<int> {
   Future<void> update(int seconds) async {
     state = seconds;
     await _repo.saveFadeOutSeconds(seconds);
+  }
+}
+
+class ThemeSeedController extends StateNotifier<ThemeSeedOption> {
+  ThemeSeedController(this._repo) : super(_repo.themeSeedOption);
+  final AppSettingsRepository _repo;
+
+  /// Advances to the next option after [state], skipping [ThemeSeedOption.system]
+  /// when [systemAvailable] is false. If the persisted option is no longer
+  /// available (e.g. `system` was picked on a device that later doesn't
+  /// offer one), this just resets to the first available option instead of
+  /// getting stuck.
+  Future<void> cycle({required bool systemAvailable}) async {
+    final available = ThemeSeedOption.values
+        .where((o) => systemAvailable || o != ThemeSeedOption.system)
+        .toList();
+    final currentIndex = available.indexOf(state);
+    final next = available[(currentIndex + 1) % available.length];
+    state = next;
+    await _repo.saveThemeSeedOption(next);
   }
 }

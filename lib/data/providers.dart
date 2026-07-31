@@ -1,7 +1,10 @@
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_color_utilities/material_color_utilities.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/theme.dart';
 import '../services/audio_player_service.dart';
 import '../services/bpm_detection_service.dart';
 import '../services/file_import_service.dart';
@@ -21,7 +24,9 @@ final audioHandlerProvider = Provider<AudioPlayerHandler>((ref) {
 /// Overridden in `main()` with the instance returned by
 /// `SharedPreferences.getInstance()`.
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
-  throw UnimplementedError('sharedPreferencesProvider must be overridden in main()');
+  throw UnimplementedError(
+    'sharedPreferencesProvider must be overridden in main()',
+  );
 });
 
 /// App/build version info, shown in the Settings "About" section - read
@@ -42,27 +47,52 @@ final appSettingsRepositoryProvider = Provider<AppSettingsRepository>((ref) {
 
 final setDefaultsProvider =
     StateNotifierProvider<SetDefaultsController, SetDefaults>((ref) {
-  return SetDefaultsController(ref.watch(appSettingsRepositoryProvider));
-});
+      return SetDefaultsController(ref.watch(appSettingsRepositoryProvider));
+    });
 
 final musicRootFolderProvider =
     StateNotifierProvider<MusicRootFolderController, String>((ref) {
-  return MusicRootFolderController(ref.watch(appSettingsRepositoryProvider));
-});
+      return MusicRootFolderController(
+        ref.watch(appSettingsRepositoryProvider),
+      );
+    });
 
 /// The break-cue behavior (silence / beeps / audio track) is a single global
 /// setting, not something worth deciding per practice set - every session
 /// picks it up live from here rather than storing it per set.
 final breakCueModeProvider =
     StateNotifierProvider<BreakCueModeController, String>((ref) {
-  return BreakCueModeController(ref.watch(appSettingsRepositoryProvider));
-});
+      return BreakCueModeController(ref.watch(appSettingsRepositoryProvider));
+    });
 
 /// Same reasoning as [breakCueModeProvider]: a single global behavior rather
 /// than something worth deciding per practice set.
 final fadeOutSecondsProvider =
     StateNotifierProvider<FadeOutSecondsController, int>((ref) {
-  return FadeOutSecondsController(ref.watch(appSettingsRepositoryProvider));
+      return FadeOutSecondsController(ref.watch(appSettingsRepositoryProvider));
+    });
+
+/// The app-icon theme-cycling easter egg's current choice - see
+/// [ThemeSeedOption].
+final themeSeedProvider =
+    StateNotifierProvider<ThemeSeedController, ThemeSeedOption>((ref) {
+      return ThemeSeedController(ref.watch(appSettingsRepositoryProvider));
+    });
+
+/// The device's Material You palette (Android 12+ only) - null everywhere
+/// else, including while it's still resolving. Resolved once and cached for
+/// the app's lifetime; feeds [ThemeSeedOption.system].
+///
+/// `CorePalette` is deprecated upstream in `material_color_utilities` (in
+/// favor of `DynamicScheme`), but it's still `dynamic_color`'s own current
+/// public return type for this call - nothing to migrate to on our end yet.
+// ignore: deprecated_member_use
+final systemCorePaletteProvider = FutureProvider<CorePalette?>((ref) async {
+  try {
+    return await DynamicColorPlugin.getCorePalette();
+  } catch (_) {
+    return null;
+  }
 });
 
 final fileImportServiceProvider = Provider<FileImportService>((ref) {
