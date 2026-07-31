@@ -147,8 +147,23 @@ class AppTheme {
         // system palette (e.g. it's still loading, or unavailable on this
         // device) - the tap handler is expected to skip this option
         // entirely in that case, but this keeps _build safe regardless.
-        return systemScheme ??
-            ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
+        //
+        // [systemScheme] itself is never used directly: it comes from
+        // dynamic_color's `CorePalette.toColorScheme()`, which is built on
+        // the legacy (pre-M3-surface-container-roles) `Scheme` API and never
+        // populates `surfaceContainer`/`surfaceContainerHigh`/etc - so the
+        // nav bar, search field fill, and mini player would all render with
+        // the same fallback color instead of the tiered elevation the other
+        // options get. Re-seeding from just its primary color runs that
+        // color back through the same modern algorithm as every other
+        // option, which does compute those roles correctly.
+        if (systemScheme == null) {
+          return ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
+        }
+        return ColorScheme.fromSeed(
+          seedColor: systemScheme.primary,
+          brightness: brightness,
+        );
       case ThemeSeedOption.monochrome:
         // The "monochrome" dynamic scheme variant forces chroma to 0 across
         // every tonal palette, so the actual seed hue is irrelevant here -
