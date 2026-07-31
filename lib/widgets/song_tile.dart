@@ -19,13 +19,14 @@ class SongTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bpm = song.bpmManual ?? song.bpmDetected;
-    final isManualBpm = song.bpmManual != null;
     final durationLabel = song.durationMs != null
         ? _formatDuration(Duration(milliseconds: song.durationMs!))
         : null;
     final hasArtist = song.artist?.isNotEmpty ?? false;
-    final metaLabel =
-        [?durationLabel, bpm != null ? '${bpm.round()} BPM' : '-- BPM'].join(' \u2022 ');
+    final metaLabel = [
+      ?durationLabel,
+      bpm != null ? '${bpm.round()} BPM' : '-- BPM',
+    ].join(' \u2022 ');
 
     return ListTile(
       onTap: onTap,
@@ -42,14 +43,14 @@ class SongTile extends StatelessWidget {
         children: [
           if (hasArtist)
             Flexible(
-              child: Text(song.artist!, maxLines: 1, overflow: TextOverflow.ellipsis),
+              child: Text(
+                song.artist!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           if (hasArtist) const Text(' \u2022 '),
           Text(metaLabel, maxLines: 1, overflow: TextOverflow.ellipsis),
-          if (isManualBpm) ...[
-            const SizedBox(width: 4),
-            const Icon(Icons.edit, size: 12),
-          ],
         ],
       ),
       trailing: trailing,

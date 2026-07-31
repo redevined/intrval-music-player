@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
 import '../../widgets/sort_app_bar_actions.dart';
@@ -10,40 +11,51 @@ import 'set_builder_screen.dart';
 
 enum SetSortField { name, dateCreated }
 
-final practiceSetsProvider = StreamProvider.autoDispose<List<PracticeSet>>((ref) {
+final practiceSetsProvider = StreamProvider.autoDispose<List<PracticeSet>>((
+  ref,
+) {
   return ref.watch(practiceSetRepositoryProvider).watchAll();
 });
 
 final setSearchProvider = StateProvider.autoDispose<String>((ref) => '');
-final setSortProvider = StateProvider.autoDispose<SetSortField>((ref) => SetSortField.name);
+final setSortProvider = StateProvider.autoDispose<SetSortField>(
+  (ref) => SetSortField.name,
+);
 final setSortAscendingProvider = StateProvider.autoDispose<bool>((ref) => true);
 
 /// Applies the search/sort UI state on top of the raw practice-set stream,
 /// mirroring how the Library and Playlists tabs filter their lists.
-final visiblePracticeSetsProvider = Provider.autoDispose<AsyncValue<List<PracticeSet>>>((ref) {
-  final setsAsync = ref.watch(practiceSetsProvider);
-  final query = ref.watch(setSearchProvider).trim().toLowerCase();
-  final sortField = ref.watch(setSortProvider);
-  final ascending = ref.watch(setSortAscendingProvider);
+final visiblePracticeSetsProvider =
+    Provider.autoDispose<AsyncValue<List<PracticeSet>>>((ref) {
+      final setsAsync = ref.watch(practiceSetsProvider);
+      final query = ref.watch(setSearchProvider).trim().toLowerCase();
+      final sortField = ref.watch(setSortProvider);
+      final ascending = ref.watch(setSortAscendingProvider);
 
-  return setsAsync.whenData((sets) {
-    var result = [...sets];
-    if (query.isNotEmpty) {
-      result = result.where((s) => s.name.toLowerCase().contains(query)).toList();
-    }
-    switch (sortField) {
-      case SetSortField.name:
-        result.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-      case SetSortField.dateCreated:
-        result.sort((a, b) => a.dateCreated.compareTo(b.dateCreated));
-    }
-    if (!ascending) result = result.reversed.toList();
-    return result;
-  });
-});
+      return setsAsync.whenData((sets) {
+        var result = [...sets];
+        if (query.isNotEmpty) {
+          result = result
+              .where((s) => s.name.toLowerCase().contains(query))
+              .toList();
+        }
+        switch (sortField) {
+          case SetSortField.name:
+            result.sort(
+              (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+            );
+          case SetSortField.dateCreated:
+            result.sort((a, b) => a.dateCreated.compareTo(b.dateCreated));
+        }
+        if (!ascending) result = result.reversed.toList();
+        return result;
+      });
+    });
 
-final _setEntryCountProvider =
-    StreamProvider.autoDispose.family<int, String>((ref, setId) {
+final _setEntryCountProvider = StreamProvider.autoDispose.family<int, String>((
+  ref,
+  setId,
+) {
   return ref
       .watch(practiceSetRepositoryProvider)
       .watchEntries(setId)
@@ -63,8 +75,10 @@ class SetListScreen extends ConsumerWidget {
         actions: [
           SortAppBarActions<SetSortField>(
             ascending: ref.watch(setSortAscendingProvider),
-            onToggleAscending: () => ref.read(setSortAscendingProvider.notifier).state =
-                !ref.read(setSortAscendingProvider),
+            onToggleAscending: () =>
+                ref.read(setSortAscendingProvider.notifier).state = !ref.read(
+                  setSortAscendingProvider,
+                ),
             sortValue: ref.watch(setSortProvider),
             onSortSelected: (v) => ref.read(setSortProvider.notifier).state = v,
             items: const [
@@ -103,11 +117,14 @@ class SetListScreen extends ConsumerWidget {
                           title: Text(set.name),
                           subtitle: Consumer(
                             builder: (context, ref, _) {
-                              final count =
-                                  ref.watch(_setEntryCountProvider(set.id)).valueOrNull;
-                              return Text(count == null
-                                  ? ''
-                                  : '$count ${count == 1 ? 'entry' : 'entries'}');
+                              final count = ref
+                                  .watch(_setEntryCountProvider(set.id))
+                                  .valueOrNull;
+                              return Text(
+                                count == null
+                                    ? ''
+                                    : '$count ${count == 1 ? 'entry' : 'entries'}',
+                              );
                             },
                           ),
                           trailing: Row(
@@ -117,12 +134,16 @@ class SetListScreen extends ConsumerWidget {
                                 tooltip: 'Start session',
                                 icon: const Icon(Icons.play_arrow),
                                 onPressed: () =>
-                                    Navigator.of(context, rootNavigator: true).push(
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        PracticeSessionScreen(practiceSet: set),
-                                  ),
-                                ),
+                                    Navigator.of(
+                                      context,
+                                      rootNavigator: true,
+                                    ).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => PracticeSessionScreen(
+                                          practiceSet: set,
+                                        ),
+                                      ),
+                                    ),
                               ),
                               PopupMenuButton<_SetAction>(
                                 icon: const Icon(Icons.more_vert),
@@ -152,7 +173,8 @@ class SetListScreen extends ConsumerWidget {
                           ),
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => SetBuilderScreen(practiceSet: set),
+                              builder: (_) =>
+                                  SetBuilderScreen(practiceSet: set),
                             ),
                           ),
                         );
@@ -177,10 +199,13 @@ class SetListScreen extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('New practice set'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'Name'),
+        content: SizedBox(
+          width: kDialogContentWidth,
+          child: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: 'Name'),
+          ),
         ),
         actions: [
           TextButton(
@@ -203,7 +228,9 @@ class SetListScreen extends ConsumerWidget {
         final set = await ref.read(practiceSetRepositoryProvider).getById(id);
         if (set != null && context.mounted) {
           Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => SetBuilderScreen(practiceSet: set)),
+            MaterialPageRoute(
+              builder: (_) => SetBuilderScreen(practiceSet: set),
+            ),
           );
         }
       }
@@ -220,10 +247,13 @@ class SetListScreen extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Rename set'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'Name'),
+        content: SizedBox(
+          width: kDialogContentWidth,
+          child: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: 'Name'),
+          ),
         ),
         actions: [
           TextButton(

@@ -24,3 +24,9 @@ class TempoLimits {
   static const int maxPercent = 130;
   static const int stepPercent = 1;
 }
+
+/// Fixed width for every `AlertDialog`'s content, so a dialog's size never
+/// changes as the user types into a text field (or based on which fields
+/// happen to be present) - all modals in the app should read the same
+/// physical size regardless of content.
+const double kDialogContentWidth = 400;

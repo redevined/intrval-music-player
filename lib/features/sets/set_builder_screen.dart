@@ -10,15 +10,15 @@ import '../library/library_screen.dart';
 import '../player/practice_session_screen.dart';
 import '../playlists/playlist_list_screen.dart';
 
-final _setEntriesProvider =
-    StreamProvider.autoDispose.family<List<SetEntry>, String>((ref, setId) {
-  return ref.watch(practiceSetRepositoryProvider).watchEntries(setId);
-});
+final _setEntriesProvider = StreamProvider.autoDispose
+    .family<List<SetEntry>, String>((ref, setId) {
+      return ref.watch(practiceSetRepositoryProvider).watchEntries(setId);
+    });
 
-final _practiceSetByIdProvider =
-    StreamProvider.autoDispose.family<PracticeSet?, String>((ref, setId) {
-  return ref.watch(practiceSetRepositoryProvider).watchById(setId);
-});
+final _practiceSetByIdProvider = StreamProvider.autoDispose
+    .family<PracticeSet?, String>((ref, setId) {
+      return ref.watch(practiceSetRepositoryProvider).watchById(setId);
+    });
 
 class SetBuilderScreen extends ConsumerWidget {
   const SetBuilderScreen({super.key, required this.practiceSet});
@@ -31,7 +31,8 @@ class SetBuilderScreen extends ConsumerWidget {
     // so edits made via "Set defaults" are reflected immediately - both in
     // this screen and in any practice session started from it.
     final currentSet =
-        ref.watch(_practiceSetByIdProvider(practiceSet.id)).valueOrNull ?? practiceSet;
+        ref.watch(_practiceSetByIdProvider(practiceSet.id)).valueOrNull ??
+        practiceSet;
     final entriesAsync = ref.watch(_setEntriesProvider(practiceSet.id));
     final playlistsAsync = ref.watch(playlistsProvider);
     final foldersAsync = ref.watch(bookmarkedFoldersProvider);
@@ -50,10 +51,13 @@ class SetBuilderScreen extends ConsumerWidget {
       body: entriesAsync.when(
         data: (entries) {
           final playlists = playlistsAsync.valueOrNull ?? const <Playlist>[];
-          final folders = foldersAsync.valueOrNull ?? const <BookmarkedFolder>[];
+          final folders =
+              foldersAsync.valueOrNull ?? const <BookmarkedFolder>[];
 
           if (entries.isEmpty) {
-            return const Center(child: Text('No entries yet. Tap + to add one.'));
+            return const Center(
+              child: Text('No entries yet. Tap + to add one.'),
+            );
           }
           return ReorderableListView.builder(
             itemCount: entries.length,
@@ -61,26 +65,26 @@ class SetBuilderScreen extends ConsumerWidget {
               final entry = entries[i];
               final sourceName = entry.playlistId != null
                   ? playlists
-                      .firstWhere(
-                        (p) => p.id == entry.playlistId,
-                        orElse: () => Playlist(
-                          id: '',
-                          name: '(deleted playlist)',
-                          dateCreated: DateTime.now(),
-                        ),
-                      )
-                      .name
+                        .firstWhere(
+                          (p) => p.id == entry.playlistId,
+                          orElse: () => Playlist(
+                            id: '',
+                            name: '(deleted playlist)',
+                            dateCreated: DateTime.now(),
+                          ),
+                        )
+                        .name
                   : folders
-                      .firstWhere(
-                        (f) => f.id == entry.folderId,
-                        orElse: () => BookmarkedFolder(
-                          id: '',
-                          treeUri: '',
-                          displayName: '(deleted folder)',
-                          dateAdded: DateTime.now(),
-                        ),
-                      )
-                      .displayName;
+                        .firstWhere(
+                          (f) => f.id == entry.folderId,
+                          orElse: () => BookmarkedFolder(
+                            id: '',
+                            treeUri: '',
+                            displayName: '(deleted folder)',
+                            dateAdded: DateTime.now(),
+                          ),
+                        )
+                        .displayName;
 
               return ListTile(
                 key: ValueKey(entry.id),
@@ -93,7 +97,8 @@ class SetBuilderScreen extends ConsumerWidget {
                       .read(practiceSetRepositoryProvider)
                       .removeEntry(entry.id),
                 ),
-                onTap: () => _editEntry(context, ref, entry, playlists, folders),
+                onTap: () =>
+                    _editEntry(context, ref, entry, playlists, folders),
               );
             },
             onReorderItem: (oldIndex, newIndex) {
@@ -118,10 +123,11 @@ class SetBuilderScreen extends ConsumerWidget {
             onPressed: (entriesAsync.valueOrNull ?? const []).isEmpty
                 ? null
                 : () => Navigator.of(context, rootNavigator: true).push(
-                      MaterialPageRoute(
-                        builder: (_) => PracticeSessionScreen(practiceSet: currentSet),
-                      ),
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          PracticeSessionScreen(practiceSet: currentSet),
                     ),
+                  ),
             child: const Icon(Icons.play_arrow),
           ),
           const SizedBox(height: 12),
@@ -135,10 +141,16 @@ class SetBuilderScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _addEntry(BuildContext context, WidgetRef ref, PracticeSet currentSet) async {
+  Future<void> _addEntry(
+    BuildContext context,
+    WidgetRef ref,
+    PracticeSet currentSet,
+  ) async {
     final source = await _pickSource(context, ref);
     if (source == null) return;
-    await ref.read(practiceSetRepositoryProvider).addEntry(
+    await ref
+        .read(practiceSetRepositoryProvider)
+        .addEntry(
           currentSet.id,
           label: source.label,
           playlistId: source.playlistId,
@@ -162,55 +174,67 @@ class SetBuilderScreen extends ConsumerWidget {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: const Text('Edit entry'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: labelController,
-                  decoration: const InputDecoration(labelText: 'Label'),
-                ),
-                const SizedBox(height: 16),
-                LabeledSlider(
-                  padding: EdgeInsets.zero,
-                  label: 'Tempo override',
-                  valueLabel: tempoPercent == null ? 'inherit' : '$tempoPercent%',
-                  value: (tempoPercent ?? AppDefaults.tempoPercent).toDouble(),
-                  min: TempoLimits.minPercent.toDouble(),
-                  max: TempoLimits.maxPercent.toDouble(),
-                  divisions: TempoLimits.maxPercent - TempoLimits.minPercent,
-                  onChanged: (v) => setState(() => tempoPercent = v.round()),
-                ),
-                LabeledSlider(
-                  padding: EdgeInsets.zero,
-                  label: 'Play duration override',
-                  valueLabel: playSeconds == null ? 'inherit' : '${playSeconds}s',
-                  value: (playSeconds ?? AppDefaults.playDurationSeconds).toDouble(),
-                  min: 15,
-                  max: 300,
-                  divisions: 57,
-                  onChanged: (v) => setState(() => playSeconds = v.round()),
-                ),
-                LabeledSlider(
-                  padding: EdgeInsets.zero,
-                  label: 'Break override',
-                  valueLabel: breakSeconds == null ? 'inherit' : '${breakSeconds}s',
-                  value: (breakSeconds ?? AppDefaults.breakSeconds).toDouble(),
-                  min: 0,
-                  max: 120,
-                  divisions: 24,
-                  onChanged: (v) => setState(() => breakSeconds = v.round()),
-                ),
-                TextButton(
-                  onPressed: () => setState(() {
-                    tempoPercent = null;
-                    playSeconds = null;
-                    breakSeconds = null;
-                  }),
-                  child: const Text('Reset overrides to inherit'),
-                ),
-              ],
+          content: SizedBox(
+            width: kDialogContentWidth,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: labelController,
+                    decoration: const InputDecoration(labelText: 'Label'),
+                  ),
+                  const SizedBox(height: 16),
+                  LabeledSlider(
+                    padding: EdgeInsets.zero,
+                    label: 'Tempo override',
+                    valueLabel: tempoPercent == null
+                        ? 'inherit'
+                        : '$tempoPercent%',
+                    value: (tempoPercent ?? AppDefaults.tempoPercent)
+                        .toDouble(),
+                    min: TempoLimits.minPercent.toDouble(),
+                    max: TempoLimits.maxPercent.toDouble(),
+                    divisions: TempoLimits.maxPercent - TempoLimits.minPercent,
+                    onChanged: (v) => setState(() => tempoPercent = v.round()),
+                  ),
+                  LabeledSlider(
+                    padding: EdgeInsets.zero,
+                    label: 'Play duration override',
+                    valueLabel: playSeconds == null
+                        ? 'inherit'
+                        : '${playSeconds}s',
+                    value: (playSeconds ?? AppDefaults.playDurationSeconds)
+                        .toDouble(),
+                    min: 15,
+                    max: 300,
+                    divisions: 57,
+                    onChanged: (v) => setState(() => playSeconds = v.round()),
+                  ),
+                  LabeledSlider(
+                    padding: EdgeInsets.zero,
+                    label: 'Break override',
+                    valueLabel: breakSeconds == null
+                        ? 'inherit'
+                        : '${breakSeconds}s',
+                    value: (breakSeconds ?? AppDefaults.breakSeconds)
+                        .toDouble(),
+                    min: 0,
+                    max: 120,
+                    divisions: 24,
+                    onChanged: (v) => setState(() => breakSeconds = v.round()),
+                  ),
+                  TextButton(
+                    onPressed: () => setState(() {
+                      tempoPercent = null;
+                      playSeconds = null;
+                      breakSeconds = null;
+                    }),
+                    child: const Text('Reset overrides to inherit'),
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -220,7 +244,9 @@ class SetBuilderScreen extends ConsumerWidget {
             ),
             FilledButton(
               onPressed: () async {
-                await ref.read(practiceSetRepositoryProvider).updateEntry(
+                await ref
+                    .read(practiceSetRepositoryProvider)
+                    .updateEntry(
                       entry.id,
                       SetEntriesCompanion(
                         label: Value(labelController.text.trim()),
@@ -239,7 +265,11 @@ class SetBuilderScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _editDefaults(BuildContext context, WidgetRef ref, PracticeSet currentSet) async {
+  Future<void> _editDefaults(
+    BuildContext context,
+    WidgetRef ref,
+    PracticeSet currentSet,
+  ) async {
     var tempo = currentSet.defaultTempoPercent;
     var play = currentSet.defaultPlayDurationSeconds;
     var brk = currentSet.defaultBreakSeconds;
@@ -249,42 +279,45 @@ class SetBuilderScreen extends ConsumerWidget {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: const Text('Set defaults'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                LabeledSlider(
-                  padding: EdgeInsets.zero,
-                  label: 'Tempo',
-                  valueLabel: '$tempo%',
-                  value: tempo.toDouble(),
-                  min: TempoLimits.minPercent.toDouble(),
-                  max: TempoLimits.maxPercent.toDouble(),
-                  divisions: TempoLimits.maxPercent - TempoLimits.minPercent,
-                  onChanged: (v) => setState(() => tempo = v.round()),
-                ),
-                LabeledSlider(
-                  padding: EdgeInsets.zero,
-                  label: 'Play duration',
-                  valueLabel: '${play}s',
-                  value: play.toDouble(),
-                  min: 15,
-                  max: 300,
-                  divisions: 57,
-                  onChanged: (v) => setState(() => play = v.round()),
-                ),
-                LabeledSlider(
-                  padding: EdgeInsets.zero,
-                  label: 'Break',
-                  valueLabel: '${brk}s',
-                  value: brk.toDouble(),
-                  min: 0,
-                  max: 120,
-                  divisions: 24,
-                  onChanged: (v) => setState(() => brk = v.round()),
-                ),
-              ],
+          content: SizedBox(
+            width: kDialogContentWidth,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  LabeledSlider(
+                    padding: EdgeInsets.zero,
+                    label: 'Tempo',
+                    valueLabel: '$tempo%',
+                    value: tempo.toDouble(),
+                    min: TempoLimits.minPercent.toDouble(),
+                    max: TempoLimits.maxPercent.toDouble(),
+                    divisions: TempoLimits.maxPercent - TempoLimits.minPercent,
+                    onChanged: (v) => setState(() => tempo = v.round()),
+                  ),
+                  LabeledSlider(
+                    padding: EdgeInsets.zero,
+                    label: 'Play duration',
+                    valueLabel: '${play}s',
+                    value: play.toDouble(),
+                    min: 15,
+                    max: 300,
+                    divisions: 57,
+                    onChanged: (v) => setState(() => play = v.round()),
+                  ),
+                  LabeledSlider(
+                    padding: EdgeInsets.zero,
+                    label: 'Break',
+                    valueLabel: '${brk}s',
+                    value: brk.toDouble(),
+                    min: 0,
+                    max: 120,
+                    divisions: 24,
+                    onChanged: (v) => setState(() => brk = v.round()),
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -294,7 +327,9 @@ class SetBuilderScreen extends ConsumerWidget {
             ),
             FilledButton(
               onPressed: () async {
-                await ref.read(practiceSetRepositoryProvider).update(
+                await ref
+                    .read(practiceSetRepositoryProvider)
+                    .update(
                       currentSet.id,
                       PracticeSetsCompanion(
                         defaultTempoPercent: Value(tempo),
@@ -313,7 +348,8 @@ class SetBuilderScreen extends ConsumerWidget {
   }
 
   Future<_SourcePick?> _pickSource(BuildContext context, WidgetRef ref) async {
-    final playlists = ref.read(playlistsProvider).valueOrNull ?? const <Playlist>[];
+    final playlists =
+        ref.read(playlistsProvider).valueOrNull ?? const <Playlist>[];
 
     return showModalBottomSheet<_SourcePick>(
       context: context,
@@ -328,15 +364,20 @@ class SetBuilderScreen extends ConsumerWidget {
                 children: [
                   const Padding(
                     padding: EdgeInsets.all(16),
-                    child: Text('Playlists', style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: Text(
+                      'Playlists',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
-                  ...playlists.map((p) => ListTile(
-                        leading: const Icon(Icons.queue_music),
-                        title: Text(p.name),
-                        onTap: () => Navigator.of(context).pop(
-                          _SourcePick(label: p.name, playlistId: p.id),
-                        ),
-                      )),
+                  ...playlists.map(
+                    (p) => ListTile(
+                      leading: const Icon(Icons.queue_music),
+                      title: Text(p.name),
+                      onTap: () => Navigator.of(
+                        context,
+                      ).pop(_SourcePick(label: p.name, playlistId: p.id)),
+                    ),
+                  ),
                 ],
               ),
       ),

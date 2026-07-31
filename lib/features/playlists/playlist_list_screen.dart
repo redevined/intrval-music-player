@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
 import '../../widgets/sort_app_bar_actions.dart';
@@ -15,40 +16,48 @@ final playlistsProvider = StreamProvider.autoDispose<List<Playlist>>((ref) {
 });
 
 final playlistSearchProvider = StateProvider.autoDispose<String>((ref) => '');
-final playlistSortProvider =
-    StateProvider.autoDispose<PlaylistSortField>((ref) => PlaylistSortField.name);
-final playlistSortAscendingProvider = StateProvider.autoDispose<bool>((ref) => true);
+final playlistSortProvider = StateProvider.autoDispose<PlaylistSortField>(
+  (ref) => PlaylistSortField.name,
+);
+final playlistSortAscendingProvider = StateProvider.autoDispose<bool>(
+  (ref) => true,
+);
 
-final _playlistSongsProvider =
-    StreamProvider.autoDispose.family<List<Song>, String>((ref, playlistId) {
-  return ref.watch(playlistRepositoryProvider).watchSongs(playlistId);
-});
+final _playlistSongsProvider = StreamProvider.autoDispose
+    .family<List<Song>, String>((ref, playlistId) {
+      return ref.watch(playlistRepositoryProvider).watchSongs(playlistId);
+    });
 
 /// Applies the search/sort UI state on top of the raw playlist stream.
 /// Filtering/sorting happens client-side since the playlist count is small
 /// and this keeps [PlaylistRepository] focused on plain CRUD.
-final visiblePlaylistsProvider = Provider.autoDispose<AsyncValue<List<Playlist>>>((ref) {
-  final playlistsAsync = ref.watch(playlistsProvider);
-  final query = ref.watch(playlistSearchProvider).trim().toLowerCase();
-  final sortField = ref.watch(playlistSortProvider);
-  final ascending = ref.watch(playlistSortAscendingProvider);
+final visiblePlaylistsProvider =
+    Provider.autoDispose<AsyncValue<List<Playlist>>>((ref) {
+      final playlistsAsync = ref.watch(playlistsProvider);
+      final query = ref.watch(playlistSearchProvider).trim().toLowerCase();
+      final sortField = ref.watch(playlistSortProvider);
+      final ascending = ref.watch(playlistSortAscendingProvider);
 
-  return playlistsAsync.whenData((playlists) {
-    var result = playlists;
-    if (query.isNotEmpty) {
-      result = result.where((p) => p.name.toLowerCase().contains(query)).toList();
-    }
-    result = [...result];
-    switch (sortField) {
-      case PlaylistSortField.name:
-        result.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-      case PlaylistSortField.dateCreated:
-        result.sort((a, b) => a.dateCreated.compareTo(b.dateCreated));
-    }
-    if (!ascending) result = result.reversed.toList();
-    return result;
-  });
-});
+      return playlistsAsync.whenData((playlists) {
+        var result = playlists;
+        if (query.isNotEmpty) {
+          result = result
+              .where((p) => p.name.toLowerCase().contains(query))
+              .toList();
+        }
+        result = [...result];
+        switch (sortField) {
+          case PlaylistSortField.name:
+            result.sort(
+              (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+            );
+          case PlaylistSortField.dateCreated:
+            result.sort((a, b) => a.dateCreated.compareTo(b.dateCreated));
+        }
+        if (!ascending) result = result.reversed.toList();
+        return result;
+      });
+    });
 
 enum _PlaylistAction { rename, delete }
 
@@ -65,10 +74,12 @@ class PlaylistListScreen extends ConsumerWidget {
         actions: [
           SortAppBarActions<PlaylistSortField>(
             ascending: ref.watch(playlistSortAscendingProvider),
-            onToggleAscending: () => ref.read(playlistSortAscendingProvider.notifier).state =
-                !ref.read(playlistSortAscendingProvider),
+            onToggleAscending: () =>
+                ref.read(playlistSortAscendingProvider.notifier).state = !ref
+                    .read(playlistSortAscendingProvider),
             sortValue: ref.watch(playlistSortProvider),
-            onSortSelected: (v) => ref.read(playlistSortProvider.notifier).state = v,
+            onSortSelected: (v) =>
+                ref.read(playlistSortProvider.notifier).state = v,
             items: const [
               PopupMenuItem(value: PlaylistSortField.name, child: Text('Name')),
               PopupMenuItem(
@@ -88,7 +99,8 @@ class PlaylistListScreen extends ConsumerWidget {
                 prefixIcon: Icon(Icons.search),
                 hintText: 'Search playlists',
               ),
-              onChanged: (v) => ref.read(playlistSearchProvider.notifier).state = v,
+              onChanged: (v) =>
+                  ref.read(playlistSearchProvider.notifier).state = v,
             ),
           ),
           Expanded(
@@ -108,9 +120,11 @@ class PlaylistListScreen extends ConsumerWidget {
                             return ListTile(
                               leading: const Icon(Icons.queue_music),
                               title: Text(playlist.name),
-                              subtitle: Text(songs == null
-                                  ? ''
-                                  : '${songs.length} ${songs.length == 1 ? 'song' : 'songs'}'),
+                              subtitle: Text(
+                                songs == null
+                                    ? ''
+                                    : '${songs.length} ${songs.length == 1 ? 'song' : 'songs'}',
+                              ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -119,15 +133,20 @@ class PlaylistListScreen extends ConsumerWidget {
                                     icon: const Icon(Icons.play_arrow),
                                     onPressed: (songs ?? const []).isEmpty
                                         ? null
-                                        : () => Navigator.of(context, rootNavigator: true)
-                                                .push(
-                                              MaterialPageRoute(
-                                                builder: (_) => StandardPlayerScreen(
-                                                  songs: songs!,
-                                                  queueTitle: playlist.name,
+                                        : () =>
+                                              Navigator.of(
+                                                context,
+                                                rootNavigator: true,
+                                              ).push(
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      StandardPlayerScreen(
+                                                        songs: songs!,
+                                                        queueTitle:
+                                                            playlist.name,
+                                                      ),
                                                 ),
                                               ),
-                                            ),
                                   ),
                                   PopupMenuButton<_PlaylistAction>(
                                     icon: const Icon(Icons.more_vert),
@@ -135,7 +154,11 @@ class PlaylistListScreen extends ConsumerWidget {
                                     onSelected: (action) async {
                                       switch (action) {
                                         case _PlaylistAction.rename:
-                                          await _renamePlaylist(context, ref, playlist);
+                                          await _renamePlaylist(
+                                            context,
+                                            ref,
+                                            playlist,
+                                          );
                                         case _PlaylistAction.delete:
                                           await ref
                                               .read(playlistRepositoryProvider)
@@ -157,7 +180,8 @@ class PlaylistListScreen extends ConsumerWidget {
                               ),
                               onTap: () => Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => PlaylistDetailScreen(playlist: playlist),
+                                  builder: (_) =>
+                                      PlaylistDetailScreen(playlist: playlist),
                                 ),
                               ),
                             );
@@ -184,10 +208,13 @@ class PlaylistListScreen extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('New playlist'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'Name'),
+        content: SizedBox(
+          width: kDialogContentWidth,
+          child: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: 'Name'),
+          ),
         ),
         actions: [
           TextButton(
@@ -216,10 +243,13 @@ class PlaylistListScreen extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Rename playlist'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'Name'),
+        content: SizedBox(
+          width: kDialogContentWidth,
+          child: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: 'Name'),
+          ),
         ),
         actions: [
           TextButton(

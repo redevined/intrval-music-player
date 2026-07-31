@@ -47,7 +47,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _pickRootFolder() async {
     setState(() => _pickingFolder = true);
     try {
-      final path = await ref.read(appSettingsRepositoryProvider).pickMusicRootFolder();
+      final path = await ref
+          .read(appSettingsRepositoryProvider)
+          .pickMusicRootFolder();
       if (path == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -67,7 +69,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  Future<void> _editSetDefaults(BuildContext context, WidgetRef ref, SetDefaults defaults) async {
+  Future<void> _editSetDefaults(
+    BuildContext context,
+    WidgetRef ref,
+    SetDefaults defaults,
+  ) async {
     var tempo = defaults.tempoPercent;
     var play = defaults.playDurationSeconds;
     var brk = defaults.breakSeconds;
@@ -77,42 +83,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: const Text('New set defaults'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                LabeledSlider(
-                  padding: EdgeInsets.zero,
-                  label: 'Tempo',
-                  valueLabel: '$tempo%',
-                  value: tempo.toDouble(),
-                  min: TempoLimits.minPercent.toDouble(),
-                  max: TempoLimits.maxPercent.toDouble(),
-                  divisions: TempoLimits.maxPercent - TempoLimits.minPercent,
-                  onChanged: (v) => setState(() => tempo = v.round()),
-                ),
-                LabeledSlider(
-                  padding: EdgeInsets.zero,
-                  label: 'Play duration',
-                  valueLabel: '${play}s',
-                  value: play.toDouble(),
-                  min: 15,
-                  max: 300,
-                  divisions: 57,
-                  onChanged: (v) => setState(() => play = v.round()),
-                ),
-                LabeledSlider(
-                  padding: EdgeInsets.zero,
-                  label: 'Break',
-                  valueLabel: '${brk}s',
-                  value: brk.toDouble(),
-                  min: 0,
-                  max: 120,
-                  divisions: 24,
-                  onChanged: (v) => setState(() => brk = v.round()),
-                ),
-              ],
+          content: SizedBox(
+            width: kDialogContentWidth,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  LabeledSlider(
+                    padding: EdgeInsets.zero,
+                    label: 'Tempo',
+                    valueLabel: '$tempo%',
+                    value: tempo.toDouble(),
+                    min: TempoLimits.minPercent.toDouble(),
+                    max: TempoLimits.maxPercent.toDouble(),
+                    divisions: TempoLimits.maxPercent - TempoLimits.minPercent,
+                    onChanged: (v) => setState(() => tempo = v.round()),
+                  ),
+                  LabeledSlider(
+                    padding: EdgeInsets.zero,
+                    label: 'Play duration',
+                    valueLabel: '${play}s',
+                    value: play.toDouble(),
+                    min: 15,
+                    max: 300,
+                    divisions: 57,
+                    onChanged: (v) => setState(() => play = v.round()),
+                  ),
+                  LabeledSlider(
+                    padding: EdgeInsets.zero,
+                    label: 'Break',
+                    valueLabel: '${brk}s',
+                    value: brk.toDouble(),
+                    min: 0,
+                    max: 120,
+                    divisions: 24,
+                    onChanged: (v) => setState(() => brk = v.round()),
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -122,7 +131,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             FilledButton(
               onPressed: () async {
-                await ref.read(setDefaultsProvider.notifier).update(
+                await ref
+                    .read(setDefaultsProvider.notifier)
+                    .update(
                       SetDefaults(
                         tempoPercent: tempo,
                         playDurationSeconds: play,
@@ -139,7 +150,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Future<void> _editFadeOutSeconds(BuildContext context, WidgetRef ref, int current) async {
+  Future<void> _editFadeOutSeconds(
+    BuildContext context,
+    WidgetRef ref,
+    int current,
+  ) async {
     var fade = current;
 
     await showDialog<void>(
@@ -147,16 +162,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: const Text('Song fade-out'),
-          content: SingleChildScrollView(
-            child: LabeledSlider(
-              padding: EdgeInsets.zero,
-              label: 'Fade-out at cutoff',
-              valueLabel: '${fade}s',
-              value: fade.toDouble(),
-              min: 0,
-              max: 10,
-              divisions: 10,
-              onChanged: (v) => setState(() => fade = v.round()),
+          content: SizedBox(
+            width: kDialogContentWidth,
+            child: SingleChildScrollView(
+              child: LabeledSlider(
+                padding: EdgeInsets.zero,
+                label: 'Fade-out at cutoff',
+                valueLabel: '${fade}s',
+                value: fade.toDouble(),
+                min: 0,
+                max: 10,
+                divisions: 10,
+                onChanged: (v) => setState(() => fade = v.round()),
+              ),
             ),
           ),
           actions: [
@@ -230,10 +248,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Clear all app data?'),
-        content: const Text(
-          'This deletes all imported songs, playlists, and practice sets. '
-          'Your music files themselves are not touched - songs are '
-          're-imported automatically next time you open the Library tab.',
+        content: const SizedBox(
+          width: kDialogContentWidth,
+          child: Text(
+            'This deletes all imported songs, playlists, and practice sets. '
+            'Your music files themselves are not touched - songs are '
+            're-imported automatically next time you open the Library tab.',
+          ),
         ),
         actions: [
           TextButton(
@@ -251,9 +272,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (confirmed == true) {
       await ref.read(databaseProvider).clearAllData();
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('All app data cleared.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('All app data cleared.')));
       }
     }
   }
@@ -263,9 +284,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('intrval'),
-        content: Text(
-          '${version == null ? '' : 'Version $version\n\n'}'
-          'A tempo-controlled practice-set music player for dancers.',
+        content: SizedBox(
+          width: kDialogContentWidth,
+          child: Text(
+            '${version == null ? '' : 'Version $version\n\n'}'
+            'A tempo-controlled practice-set music player for dancers.',
+          ),
         ),
         actions: [
           TextButton(
@@ -345,8 +369,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               hiddenCount == null
                   ? 'Loading...'
                   : hiddenCount == 0
-                      ? 'No hidden songs'
-                      : '$hiddenCount hidden',
+                  ? 'No hidden songs'
+                  : '$hiddenCount hidden',
             ),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const HiddenSongsScreen()),
@@ -355,7 +379,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const Divider(),
           const _SectionHeader('Data'),
           ListTile(
-            title: const Text('Clear all app data', style: TextStyle(color: Colors.red)),
+            title: const Text(
+              'Clear all app data',
+              style: TextStyle(color: Colors.red),
+            ),
             subtitle: const Text(
               'Deletes all imported songs, playlists, and practice sets',
             ),
@@ -385,12 +412,11 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title.toUpperCase(),
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
-            ),
+          color: Theme.of(context).colorScheme.primary,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
+        ),
       ),
     );
   }
 }
-
