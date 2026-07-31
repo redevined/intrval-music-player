@@ -7,6 +7,18 @@ import 'package:flutter/material.dart';
 /// `systemCorePaletteProvider`.
 enum ThemeSeedOption { green, blue, magenta, monochrome, system }
 
+/// Display name shown in the "Theme changed to ..." toast - see
+/// [TabHeading]'s tap handler.
+extension ThemeSeedOptionLabel on ThemeSeedOption {
+  String get label => switch (this) {
+        ThemeSeedOption.green => 'green',
+        ThemeSeedOption.blue => 'blue',
+        ThemeSeedOption.magenta => 'magenta',
+        ThemeSeedOption.monochrome => 'monochrome',
+        ThemeSeedOption.system => 'system',
+      };
+}
+
 /// intrval's app theme: Material 3, kept deliberately plain in structure but
 /// given a bit of polish through shape, weight and spacing rather than
 /// decoration.

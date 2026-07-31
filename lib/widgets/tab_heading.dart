@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/theme.dart';
 import '../data/providers.dart';
 
 /// Title row used by the 4 root tab screens (Library, Playlists, Sets,
@@ -24,9 +25,18 @@ class TabHeading extends ConsumerWidget {
       children: [
         InkWell(
           customBorder: const CircleBorder(),
-          onTap: () => ref
-              .read(themeSeedProvider.notifier)
-              .cycle(systemAvailable: systemAvailable),
+          onTap: () async {
+            await ref
+                .read(themeSeedProvider.notifier)
+                .cycle(systemAvailable: systemAvailable);
+            if (!context.mounted) return;
+            final newOption = ref.read(themeSeedProvider);
+            ScaffoldMessenger.of(context)
+              ..clearSnackBars()
+              ..showSnackBar(
+                SnackBar(content: Text('Theme changed to ${newOption.label}')),
+              );
+          },
           child: Container(
             padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
