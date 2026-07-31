@@ -45,7 +45,6 @@ dependencies:
   path: ^1.9.0
 
   # File/folder access (Storage Access Framework for local device storage)
-  file_picker: ^8.1.7
   saf: ^2.1.0
   permission_handler: ^11.3.1
 
@@ -75,15 +74,8 @@ dependencies:
 # on this project's Gradle/AGP/Kotlin versions. jni 1.0.2 reverts that
 # migration - pin to it explicitly in case pub's resolver would otherwise
 # pick 1.0.1 for some transitive path.
-#
-# url_launcher_android 6.3.26+ bumps androidx.core:core to 1.17.0 (and
-# 6.3.27+ also bumps androidx.browser:browser to 1.9.0), both of which
-# require AGP 8.9.1+ - newer than this project's pinned 8.7.2 (see
-# docs/adr/0008-android-toolchain-pins.md). Pin to the last version before
-# that bump.
 dependency_overrides:
   jni: 1.0.2
-  url_launcher_android: 6.3.25
 
 dev_dependencies:
   flutter_test:

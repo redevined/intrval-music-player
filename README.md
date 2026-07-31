@@ -57,9 +57,9 @@ lib/
 - Flutter SDK (stable channel).
 - Android SDK (`cmdline-tools`, `platform-tools`, a platform image, and
   matching build-tools) with `ANDROID_HOME` set.
-- A JDK compatible with this project's pinned Gradle/AGP versions - see
-  [`docs/adr/0008-android-toolchain-pins.md`](docs/adr/0008-android-toolchain-pins.md).
-  Bleeding-edge JDKs (e.g. a `brew install openjdk` that resolves to the
+- A JDK compatible with this project's Gradle version - see
+  [`docs/adr/0008-android-toolchain-pins.md`](docs/adr/0008-android-toolchain-pins.md)
+  for toolchain history. Bleeding-edge JDKs (e.g. a `brew install openjdk` that resolves to the
   latest release) may be **too new** for Gradle; if `flutter doctor` or the
   build complains, install an LTS JDK (21) instead and point Flutter at it:
   ```

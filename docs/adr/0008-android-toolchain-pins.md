@@ -2,54 +2,64 @@
 
 ## Status
 
-Accepted
+Superseded - the AGP/Kotlin/Gradle pin below was **lifted**. Kept for
+history and because the `jni` pin it originally travelled with is still
+needed.
 
 ## Context
 
 `flutter create` (on a very recent Flutter stable channel) scaffolded the
 Android project with bleeding-edge toolchain defaults: Android Gradle
-Plugin (AGP) 9.0.1, Kotlin 2.3.20, Gradle 9.1.0. Several dependencies in
-this project (originally `audiotags`, and transitively `jni` via
-`path_provider_android`) have Android Gradle modules that are not
-compatible with that combination - see `docs/TROUBLESHOOTING.md` for the
-full failure sequence. None of the incompatibilities could be worked
-around from the consuming app's Gradle files once discovered (e.g. AGP 9.x
-hard-fails on a plugin's mismatched `compileSdk` with no override hook
-available post-evaluation).
+Plugin (AGP) 9.0.1, Kotlin 2.3.20, Gradle 9.1.0. Two dependencies had
+Android Gradle modules that hard-failed the build under that combination,
+both the same class of bug: AGP 9.x hard-fails (instead of just warning,
+like 8.7.x) when a plugin's bundled Android module declares a `compileSdk`
+lower than what its own transitive `androidx` dependencies require, with no
+override hook available once AGP has read it:
 
-`audiotags` was later dropped in favor of the pure-Dart
-`audio_metadata_reader` (no native Android module at all), specifically to
-try to lift this pin. Re-testing at that point showed the AGP bump is
-still blocked, now by `file_picker` (via its `flutter_plugin_android_lifecycle`
-dependency, which requires compiling against API 36+ while `file_picker`
-itself is compiled against API 34) - the same class of bug, just a
-different plugin. The pin stays until that's resolved too.
+- `audiotags` itself hardcoded `compileSdkVersion 31`.
+- `file_picker` (via its `flutter_plugin_android_lifecycle` dependency)
+  was compiled against API 34 while that dependency needed 36+.
+
+See `docs/TROUBLESHOOTING.md` for the original failure sequence and
+failed workaround attempts.
+
+Both turned out to be removable rather than truly needed:
+- `audiotags` was replaced with the pure-Dart `audio_metadata_reader` (no
+  native Android module at all) - only 4 fields (title/artist/album/
+  duration) were ever read from it.
+- `file_picker` turned out to be **entirely unused** - all file/folder
+  access in this app goes through `saf` (Storage Access Framework); it was
+  a leftover dependency with zero references in `lib/`.
+
+With both gone, AGP/Kotlin/Gradle were bumped back to the versions
+`flutter create` originally picked and the build succeeds cleanly (aside
+from an unrelated, non-fatal "KGP applied by a plugin" warning from
+`package_info_plus`/`saf`, about a *future* Flutter breaking change).
+
+The `jni` issue is unrelated to `compileSdk` and still applies: `jni`
+1.0.1 (a transitive dependency of `path_provider_android`, and therefore
+unavoidable) shipped a breaking Kotlin Gradle Plugin migration in its own
+`android/build.gradle` that isn't compatible with this project's Kotlin
+version; 1.0.2 reverts it.
 
 ## Decision
 
-- Pin `jni: 1.0.2` via `dependency_overrides` in `pubspec.yaml` (1.0.1, a
-  transitive dependency of `path_provider_android`, shipped a breaking
-  Kotlin Gradle Plugin migration that 1.0.2 reverts).
-- Pin `url_launcher_android: 6.3.25` via `dependency_overrides` (6.3.26+
-  bumps `androidx.core:core` to 1.17.0, and 6.3.27+ also bumps
-  `androidx.browser:browser` to 1.9.0 - both require AGP 8.9.1+, newer than
-  the pin below).
-- Pin the Android toolchain to versions from before AGP started hard-failing
-  on plugin `compileSdk` mismatches, in `android/settings.gradle.kts`:
-  - `com.android.application` → `8.7.2`
-  - `org.jetbrains.kotlin.android` → `2.1.0`
-- Pin Gradle itself to `8.10.2` in
-  `android/gradle/wrapper/gradle-wrapper.properties`, since AGP 8.7.x is not
-  tested against Gradle 9.x.
+- Keep pinning `jni: 1.0.2` via `dependency_overrides` in `pubspec.yaml`
+  (see above - independent of the AGP pin, still needed).
+- **No longer pin** the Android toolchain: `android/settings.gradle.kts`
+  and `android/gradle/wrapper/gradle-wrapper.properties` track whatever
+  `flutter create` would currently scaffold (AGP 9.0.1, Kotlin 2.3.20,
+  Gradle 9.1.0 as of this writing).
+- **No longer pin** `url_launcher_android` - the override existed only
+  because 6.3.26+ requires AGP 8.9.1+, which is no longer a constraint.
 
 ## Consequences
 
-- `flutter build apk`/`flutter run` print "Flutter support for your
-  project's Gradle/AGP/Kotlin version will soon be dropped" warnings. These
-  are non-fatal today; revisit this pin once `audiotags` (or a replacement
-  tag-reading package) fixes its bundled `compileSdk`, or once `jni` ships a
-  release that's compatible with a newer AGP without the KGP migration bug.
-- Building also requires an LTS JDK (21) rather than whatever is newest -
+- If a plugin dependency is ever added back with the same bundled-`compileSdk`
+  mismatch bug (`audiotags`, `file_picker`, or otherwise), this exact
+  failure will resurface. Check `docs/TROUBLESHOOTING.md` item 6 first.
+- Building still requires an LTS JDK (21) rather than whatever is newest -
   see the README's "Prerequisites" section and `flutter config --jdk-dir`.
-- This pin is Android-Gradle-specific and has no bearing on the (separate,
+- This ADR is Android-Gradle-specific and has no bearing on the (separate,
   not-yet-done) iOS toolchain setup.

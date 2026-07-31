@@ -155,7 +155,15 @@ distributionUrl=https\://services.gradle.org/distributions/gradle-8.10.2-all.zip
 
 This produces "Flutter support for your project's Gradle/AGP/Kotlin version
 will soon be dropped" warnings on every build - expected and non-fatal for
-now. See [ADR 0008](adr/0008-android-toolchain-pins.md) for when to revisit.
+now.
+
+**Update:** this pin was later lifted entirely - `audiotags` was replaced
+with a pure-Dart alternative, and separately `file_picker` turned out to be
+an unused leftover dependency with the exact same `compileSdk`-mismatch bug.
+See [ADR 0008](adr/0008-android-toolchain-pins.md) for the full story; the
+`android/settings.gradle.kts`/`gradle-wrapper.properties` pins from this
+item no longer apply. Kept here in case a future dependency reintroduces
+the same failure mode.
 
 ## Open items
 
