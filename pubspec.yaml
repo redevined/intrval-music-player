@@ -49,8 +49,9 @@ dependencies:
   saf: ^2.1.0
   permission_handler: ^11.3.1
 
-  # Audio metadata extraction (title/artist/album/duration/art)
-  audiotags: ^1.4.5
+  # Audio metadata extraction (title/artist/album/duration). Pure Dart - no
+  # native Android/iOS module, unlike audiotags (see ADR 0008).
+  audio_metadata_reader: ^1.7.1
 
   # Playback engine + background/lock-screen media session
   just_audio: ^0.9.42

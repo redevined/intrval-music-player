@@ -9,12 +9,21 @@ Accepted
 `flutter create` (on a very recent Flutter stable channel) scaffolded the
 Android project with bleeding-edge toolchain defaults: Android Gradle
 Plugin (AGP) 9.0.1, Kotlin 2.3.20, Gradle 9.1.0. Several dependencies in
-this project (`audiotags`, and transitively `jni` via `path_provider_android`)
-have Android Gradle modules that are not compatible with that combination -
-see `docs/TROUBLESHOOTING.md` for the full failure sequence. None of the
-incompatibilities could be worked around from the consuming app's Gradle
-files once discovered (e.g. AGP 9.x hard-fails on a plugin's mismatched
-`compileSdk` with no override hook available post-evaluation).
+this project (originally `audiotags`, and transitively `jni` via
+`path_provider_android`) have Android Gradle modules that are not
+compatible with that combination - see `docs/TROUBLESHOOTING.md` for the
+full failure sequence. None of the incompatibilities could be worked
+around from the consuming app's Gradle files once discovered (e.g. AGP 9.x
+hard-fails on a plugin's mismatched `compileSdk` with no override hook
+available post-evaluation).
+
+`audiotags` was later dropped in favor of the pure-Dart
+`audio_metadata_reader` (no native Android module at all), specifically to
+try to lift this pin. Re-testing at that point showed the AGP bump is
+still blocked, now by `file_picker` (via its `flutter_plugin_android_lifecycle`
+dependency, which requires compiling against API 36+ while `file_picker`
+itself is compiled against API 34) - the same class of bug, just a
+different plugin. The pin stays until that's resolved too.
 
 ## Decision
 
