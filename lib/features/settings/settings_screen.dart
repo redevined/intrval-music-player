@@ -341,7 +341,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               builder: (context) => AlertDialog(
                 title: const Text('intrval'),
                 content: const Text(
-                  'Version 1.0.0\n\n'
+                  'Version 0.1.0\n\n'
                   'A tempo-controlled practice-set music player for dancers.',
                 ),
                 actions: [
