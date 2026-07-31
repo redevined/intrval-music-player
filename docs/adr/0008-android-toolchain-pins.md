@@ -21,6 +21,10 @@ files once discovered (e.g. AGP 9.x hard-fails on a plugin's mismatched
 - Pin `jni: 1.0.2` via `dependency_overrides` in `pubspec.yaml` (1.0.1, a
   transitive dependency of `path_provider_android`, shipped a breaking
   Kotlin Gradle Plugin migration that 1.0.2 reverts).
+- Pin `url_launcher_android: 6.3.25` via `dependency_overrides` (6.3.26+
+  bumps `androidx.core:core` to 1.17.0, and 6.3.27+ also bumps
+  `androidx.browser:browser` to 1.9.0 - both require AGP 8.9.1+, newer than
+  the pin below).
 - Pin the Android toolchain to versions from before AGP started hard-failing
   on plugin `compileSdk` mismatches, in `android/settings.gradle.kts`:
   - `com.android.application` → `8.7.2`

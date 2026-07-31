@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/audio_player_service.dart';
@@ -21,6 +22,12 @@ final audioHandlerProvider = Provider<AudioPlayerHandler>((ref) {
 /// `SharedPreferences.getInstance()`.
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError('sharedPreferencesProvider must be overridden in main()');
+});
+
+/// App/build version info, shown in the Settings "About" section - read
+/// once and cached for the app's lifetime rather than re-fetched per screen.
+final packageInfoProvider = FutureProvider<PackageInfo>((ref) {
+  return PackageInfo.fromPlatform();
 });
 
 final databaseProvider = Provider<AppDatabase>((ref) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants.dart';
 import '../../data/database/database.dart';
@@ -8,6 +9,8 @@ import '../../data/repositories/app_settings_repository.dart';
 import '../../widgets/labeled_slider.dart';
 import '../../widgets/tab_heading.dart';
 import 'hidden_songs_screen.dart';
+
+const _repoUrl = 'https://github.com/redevined/intrval-music-player';
 
 final _hiddenSongCountProvider = StreamProvider.autoDispose<int>((ref) {
   return ref
@@ -255,6 +258,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  Future<void> _showAbout(BuildContext context, String? version) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('intrval'),
+        content: Text(
+          '${version == null ? '' : 'Version $version\n\n'}'
+          'A tempo-controlled practice-set music player for dancers.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => launchUrl(
+              Uri.parse(_repoUrl),
+              mode: LaunchMode.externalApplication,
+            ),
+            child: const Text('View on GitHub'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final defaults = ref.watch(setDefaultsProvider);
@@ -262,6 +291,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final breakCueMode = ref.watch(breakCueModeProvider);
     final fadeOutSeconds = ref.watch(fadeOutSecondsProvider);
     final hiddenCount = ref.watch(_hiddenSongCountProvider).valueOrNull;
+    final version = ref.watch(packageInfoProvider).valueOrNull?.version;
 
     return Scaffold(
       appBar: AppBar(title: const TabHeading('Settings')),
@@ -334,24 +364,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const Divider(),
           const _SectionHeader('About'),
           ListTile(
-            leading: const Icon(Icons.info_outline),
             title: const Text('About intrval'),
-            onTap: () => showDialog<void>(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('intrval'),
-                content: const Text(
-                  'Version 0.1.0\n\n'
-                  'A tempo-controlled practice-set music player for dancers.',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Close'),
-                  ),
-                ],
-              ),
-            ),
+            subtitle: Text(version == null ? 'Loading...' : 'Version $version'),
+            onTap: () => _showAbout(context, version),
           ),
         ],
       ),

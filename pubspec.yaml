@@ -65,6 +65,8 @@ dependencies:
   uuid: ^4.5.1
   collection: ^1.19.0
   shared_preferences: ^2.5.5
+  package_info_plus: ^8.1.0
+  url_launcher: ^6.3.1
 
 # jni 1.0.1 (a transitive dep of path_provider_android, pulled in regardless
 # of the sqlite3 version) shipped a breaking Kotlin Gradle Plugin migration in
@@ -72,8 +74,15 @@ dependencies:
 # on this project's Gradle/AGP/Kotlin versions. jni 1.0.2 reverts that
 # migration - pin to it explicitly in case pub's resolver would otherwise
 # pick 1.0.1 for some transitive path.
+#
+# url_launcher_android 6.3.26+ bumps androidx.core:core to 1.17.0 (and
+# 6.3.27+ also bumps androidx.browser:browser to 1.9.0), both of which
+# require AGP 8.9.1+ - newer than this project's pinned 8.7.2 (see
+# docs/adr/0008-android-toolchain-pins.md). Pin to the last version before
+# that bump.
 dependency_overrides:
   jni: 1.0.2
+  url_launcher_android: 6.3.25
 
 dev_dependencies:
   flutter_test:
