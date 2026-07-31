@@ -43,6 +43,21 @@ final musicRootFolderProvider =
   return MusicRootFolderController(ref.watch(appSettingsRepositoryProvider));
 });
 
+/// The break-cue behavior (silence / beeps / audio track) is a single global
+/// setting, not something worth deciding per practice set - every session
+/// picks it up live from here rather than storing it per set.
+final breakCueModeProvider =
+    StateNotifierProvider<BreakCueModeController, String>((ref) {
+  return BreakCueModeController(ref.watch(appSettingsRepositoryProvider));
+});
+
+/// Same reasoning as [breakCueModeProvider]: a single global behavior rather
+/// than something worth deciding per practice set.
+final fadeOutSecondsProvider =
+    StateNotifierProvider<FadeOutSecondsController, int>((ref) {
+  return FadeOutSecondsController(ref.watch(appSettingsRepositoryProvider));
+});
+
 final fileImportServiceProvider = Provider<FileImportService>((ref) {
   return FileImportService();
 });

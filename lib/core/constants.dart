@@ -4,7 +4,14 @@ class AppDefaults {
   static const int playDurationSeconds = 105; // 1:45
   static const int breakSeconds = 30; // 0:30
   static const int fadeOutSeconds = 3;
+
+  /// Fixed lead time before the beep cue plays during a break - not
+  /// user-configurable, to keep the break-cue setup to a single choice.
   static const int beepLeadSeconds = 5;
+
+  /// Fixed fade-in/fade-out length for the break audio track, clamped down
+  /// for breaks shorter than twice this.
+  static const int breakTrackFadeSeconds = 2;
   static const int tempoPercent = 100;
 
   /// Default folder auto-scanned for music, used until the user picks a

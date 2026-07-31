@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -28,6 +30,10 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
   // beep) so it can play alongside whatever - if anything - the main player
   // is doing, without disturbing its loaded track/position/tempo.
   final AudioPlayer _cuePlayer = AudioPlayer();
+
+  // A separate player for the break audio track, so it can loop/fade
+  // independently of the main player and the short beep cue.
+  final AudioPlayer _breakPlayer = AudioPlayer();
 
   /// Called when the current track finishes playing naturally.
   void Function()? onTrackComplete;
@@ -62,12 +68,41 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
   /// goes out at normal media volume instead, so it's reliably audible.
   Future<void> playBeep() async {
     try {
-      await _cuePlayer.setAsset('assets/sounds/beep.wav');
+      await _cuePlayer.setAsset('assets/sounds/beeps.mp3');
       await _cuePlayer.play();
     } catch (_) {
       // A missing/undecodable cue asset shouldn't take the session down.
     }
   }
+
+  /// Starts the bundled break audio track looping at zero volume, then fades
+  /// it in over [fadeDuration]. Pair with [fadeOutAndStopBreakTrack] (or
+  /// [stopBreakTrack] for an immediate cut, e.g. on skip) to end it.
+  Future<void> playBreakTrack({Duration fadeDuration = const Duration(seconds: 2)}) async {
+    try {
+      await _breakPlayer.setAsset('assets/sounds/break_audio_track.mp3');
+      await _breakPlayer.setLoopMode(LoopMode.one);
+      await _breakPlayer.setVolume(0);
+      unawaited(_breakPlayer.play());
+      await _fade(_breakPlayer, from: 0, to: 1, duration: fadeDuration);
+    } catch (_) {
+      // A missing/undecodable break track just means a silent break.
+    }
+  }
+
+  /// Fades the break track out over [fadeDuration] and stops it.
+  Future<void> fadeOutAndStopBreakTrack({Duration fadeDuration = const Duration(seconds: 2)}) async {
+    await _fade(_breakPlayer, from: _breakPlayer.volume, to: 0, duration: fadeDuration);
+    await _breakPlayer.stop();
+  }
+
+  /// Stops the break track immediately, with no fade - used when the user
+  /// skips out of a break early.
+  Future<void> stopBreakTrack() => _breakPlayer.stop();
+
+  void pauseBreakTrack() => _breakPlayer.pause();
+
+  Future<void> resumeBreakTrack() => _breakPlayer.play();
 
   @override
   Future<void> play() => _player.play();
@@ -93,16 +128,30 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       await _player.stop();
       return;
     }
-    const steps = 20;
-    final stepDuration = duration ~/ steps;
     final startVolume = _player.volume;
-    for (var i = 1; i <= steps; i++) {
-      await Future.delayed(stepDuration);
-      final v = startVolume * (1 - i / steps);
-      await _player.setVolume(v.clamp(0.0, 1.0));
-    }
+    await _fade(_player, from: startVolume, to: 0, duration: duration);
     await _player.stop();
     await _player.setVolume(startVolume);
+  }
+
+  /// Linearly ramps [player]'s volume from [from] to [to] over [duration].
+  Future<void> _fade(
+    AudioPlayer player, {
+    required double from,
+    required double to,
+    required Duration duration,
+  }) async {
+    if (duration <= Duration.zero) {
+      await player.setVolume(to);
+      return;
+    }
+    const steps = 20;
+    final stepDuration = duration ~/ steps;
+    for (var i = 1; i <= steps; i++) {
+      await Future.delayed(stepDuration);
+      final v = from + (to - from) * (i / steps);
+      await player.setVolume(v.clamp(0.0, 1.0));
+    }
   }
 
   void _broadcastState(PlaybackEvent event) {

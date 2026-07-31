@@ -42,18 +42,6 @@ class PracticeSetRepository {
             defaultBreakSeconds: defaults != null
                 ? Value(defaults.breakSeconds)
                 : const Value.absent(),
-            defaultFadeOutSeconds: defaults != null
-                ? Value(defaults.fadeOutSeconds)
-                : const Value.absent(),
-            defaultBreakCueMode: defaults != null
-                ? Value(defaults.breakCueMode)
-                : const Value.absent(),
-            defaultBeepLeadSeconds: defaults != null
-                ? Value(defaults.beepLeadSeconds)
-                : const Value.absent(),
-            defaultAmbientSongId: defaults?.ambientSongId != null
-                ? Value(defaults!.ambientSongId)
-                : const Value.absent(),
           ),
         );
     return id;

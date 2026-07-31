@@ -37,6 +37,16 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   Duration? _stopAt;
   bool _stopAtAnchored = false;
 
+  /// Projects where the cutoff marker sits on the track from [position],
+  /// given [cutoffRemainingSeconds] of real wall-clock playback time left at
+  /// [tempoPercent]. The countdown itself ticks in real seconds regardless of
+  /// tempo, but the track position it corresponds to advances faster or
+  /// slower than that depending on tempo, so the two can't be added directly.
+  Duration _projectStopAt(Duration position, int cutoffRemainingSeconds, int tempoPercent) {
+    final coveredMs = cutoffRemainingSeconds * 1000 * tempoPercent / 100;
+    return position + Duration(milliseconds: coveredMs.round());
+  }
+
   @override
   void initState() {
     super.initState();
@@ -92,7 +102,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       final cutoffRemaining = session.cutoffRemainingSeconds;
       _stopAt = cutoffRemaining == null
           ? null
-          : handler.position + Duration(seconds: cutoffRemaining);
+          : _projectStopAt(handler.position, cutoffRemaining, session.tempoPercent);
     }
 
     return PlayerShell(
@@ -150,7 +160,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                     setState(() {
                       _stopAt = cutoffRemaining == null
                           ? null
-                          : target + Duration(seconds: cutoffRemaining);
+                          : _projectStopAt(target, cutoffRemaining, session.tempoPercent);
                     });
                   },
                   // Only worth showing if the cutoff would actually fire
@@ -167,7 +177,18 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
           ? null
           : TempoSlider(
               percent: session.tempoPercent,
-              onChanged: controller.setTempo,
+              onChanged: (percent) {
+                // The marker's remaining distance is covered at the new
+                // tempo, not the old one, so it has to be re-projected from
+                // the current position rather than left where it was.
+                final cutoffRemaining = session.cutoffRemainingSeconds;
+                if (cutoffRemaining != null) {
+                  setState(() {
+                    _stopAt = _projectStopAt(handler.position, cutoffRemaining, percent);
+                  });
+                }
+                controller.setTempo(percent);
+              },
             ),
       controls: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -187,7 +208,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
           ),
         ],
       ),
-      footer: _NextUp(next: session.nextEntry),
+      footer: breaking ? _NextUp(next: session.nextEntry) : null,
     );
   }
 }

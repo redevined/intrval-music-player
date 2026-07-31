@@ -243,7 +243,6 @@ class SetBuilderScreen extends ConsumerWidget {
     var tempo = currentSet.defaultTempoPercent;
     var play = currentSet.defaultPlayDurationSeconds;
     var brk = currentSet.defaultBreakSeconds;
-    var fade = currentSet.defaultFadeOutSeconds;
 
     await showDialog<void>(
       context: context,
@@ -285,16 +284,6 @@ class SetBuilderScreen extends ConsumerWidget {
                   divisions: 24,
                   onChanged: (v) => setState(() => brk = v.round()),
                 ),
-                LabeledSlider(
-                  padding: EdgeInsets.zero,
-                  label: 'Fade-out at cutoff',
-                  valueLabel: '${fade}s',
-                  value: fade.toDouble(),
-                  min: 0,
-                  max: 10,
-                  divisions: 10,
-                  onChanged: (v) => setState(() => fade = v.round()),
-                ),
               ],
             ),
           ),
@@ -311,7 +300,6 @@ class SetBuilderScreen extends ConsumerWidget {
                         defaultTempoPercent: Value(tempo),
                         defaultPlayDurationSeconds: Value(play),
                         defaultBreakSeconds: Value(brk),
-                        defaultFadeOutSeconds: Value(fade),
                       ),
                     );
                 if (context.mounted) Navigator.of(context).pop();

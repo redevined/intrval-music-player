@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
 import 'now_playing_controller.dart';
@@ -18,20 +19,12 @@ class ResolvedSetEntry {
     required this.tempoPercent,
     required this.playDurationSeconds,
     required this.breakSeconds,
-    required this.fadeOutSeconds,
-    required this.breakCueMode,
-    required this.beepLeadSeconds,
-    required this.ambientSongId,
   });
 
   final SetEntry entry;
   final int tempoPercent;
   final int playDurationSeconds;
   final int breakSeconds;
-  final int fadeOutSeconds;
-  final String breakCueMode;
-  final int beepLeadSeconds;
-  final String? ambientSongId;
 
   String get label => entry.label;
 }
@@ -49,6 +42,7 @@ class PracticeSessionState {
     this.breakTotalSeconds = 0,
     this.paused = false,
     this.cutoffRemainingSeconds,
+    this.activeBreakCueMode,
   });
 
   final PracticeSet practiceSet;
@@ -69,6 +63,11 @@ class PracticeSessionState {
   /// down only while actually playing (frozen while paused). Null outside
   /// [SessionPhase.playing].
   final int? cutoffRemainingSeconds;
+
+  /// The break-cue mode snapshotted from the global setting when the current
+  /// break started, so it can't change mid-break if the setting is edited
+  /// while a break is already running. Null outside [SessionPhase.breaking].
+  final String? activeBreakCueMode;
 
   ResolvedSetEntry? get currentEntry =>
       entryIndex >= 0 && entryIndex < entries.length ? entries[entryIndex] : null;
@@ -94,6 +93,8 @@ class PracticeSessionState {
     bool? paused,
     int? cutoffRemainingSeconds,
     bool clearCutoffRemaining = false,
+    String? activeBreakCueMode,
+    bool clearActiveBreakCueMode = false,
   }) {
     return PracticeSessionState(
       practiceSet: practiceSet ?? this.practiceSet,
@@ -108,6 +109,9 @@ class PracticeSessionState {
       cutoffRemainingSeconds: clearCutoffRemaining
           ? null
           : (cutoffRemainingSeconds ?? this.cutoffRemainingSeconds),
+      activeBreakCueMode: clearActiveBreakCueMode
+          ? null
+          : (activeBreakCueMode ?? this.activeBreakCueMode),
     );
   }
 }
@@ -173,10 +177,6 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
       tempoPercent: e.tempoPercent ?? set.defaultTempoPercent,
       playDurationSeconds: e.playDurationSeconds ?? set.defaultPlayDurationSeconds,
       breakSeconds: e.breakSeconds ?? set.defaultBreakSeconds,
-      fadeOutSeconds: e.fadeOutSeconds ?? set.defaultFadeOutSeconds,
-      breakCueMode: e.breakCueMode ?? set.defaultBreakCueMode,
-      beepLeadSeconds: e.beepLeadSeconds ?? set.defaultBeepLeadSeconds,
-      ambientSongId: e.ambientSongId ?? set.defaultAmbientSongId,
     );
   }
 
@@ -202,6 +202,7 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
       tempoPercent: resolved.tempoPercent,
       paused: false,
       clearCurrentSong: true,
+      clearActiveBreakCueMode: true,
     );
 
     final candidates = await _candidateSongs(resolved.entry);
@@ -277,9 +278,10 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
       if (remaining <= 0) {
         timer.cancel();
         state = current.copyWith(cutoffRemainingSeconds: 0);
+        final fadeOutSeconds = _ref.read(fadeOutSecondsProvider);
         await _ref
             .read(audioHandlerProvider)
-            .fadeOutAndStop(Duration(seconds: resolved.fadeOutSeconds));
+            .fadeOutAndStop(Duration(seconds: fadeOutSeconds));
         if (generation != _generation) return;
         _startBreak();
       } else {
@@ -309,37 +311,46 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
 
     // The set runs forward only - a break after the last entry would just
     // be dead air before the completion screen, so skip straight there.
-    if (s.entryIndex >= s.entries.length - 1) {
+    // A zero-length break is likewise skipped entirely - no cue of any kind
+    // should play for a break that isn't actually happening.
+    if (s.entryIndex >= s.entries.length - 1 || resolved.breakSeconds <= 0) {
       _advance();
       return;
     }
 
     final generation = ++_generation;
 
+    // Snapshotted once per break from the global setting, so an in-flight
+    // break isn't disrupted by the user changing the setting mid-break.
+    final mode = _ref.read(breakCueModeProvider);
+
     state = s.copyWith(
       phase: SessionPhase.breaking,
       breakSecondsRemaining: resolved.breakSeconds,
       breakTotalSeconds: resolved.breakSeconds,
       clearCutoffRemaining: true,
+      activeBreakCueMode: mode,
     );
 
-    if (resolved.breakCueMode == BreakCueMode.ambientSong &&
-        resolved.ambientSongId != null) {
-      final ambient =
-          await _ref.read(songRepositoryProvider).getById(resolved.ambientSongId!);
-      if (generation != _generation) return;
-      if (ambient != null) {
-        final handler = _ref.read(audioHandlerProvider);
-        try {
-          await handler.loadTrack(
-            uriOrPath: ambient.uri,
-            item: MediaItem(id: ambient.id, title: ambient.title),
-          ).timeout(const Duration(seconds: 15));
-          unawaited(handler.play());
-        } catch (_) {
-          // A missing break track just means a silent break.
-        }
-      }
+    final handler = _ref.read(audioHandlerProvider);
+
+    // Fade duration for the break audio track, clamped so a very short
+    // break still leaves room for both a fade-in and a fade-out.
+    final trackFadeSeconds =
+        min(AppDefaults.breakTrackFadeSeconds, resolved.breakSeconds ~/ 2);
+    final trackFade = Duration(seconds: trackFadeSeconds);
+
+    if (mode == BreakCueMode.ambientSong) {
+      unawaited(handler.playBreakTrack(fadeDuration: trackFade));
+    }
+
+    // The beep is a fixed lead time before the break ends; if the break
+    // itself is shorter than that, it just fires right away.
+    final beepAtRemaining =
+        min(AppDefaults.beepLeadSeconds, resolved.breakSeconds);
+    if (mode == BreakCueMode.beepBeforeEnd &&
+        beepAtRemaining >= resolved.breakSeconds) {
+      unawaited(handler.playBeep());
     }
 
     _breakTicker?.cancel();
@@ -358,15 +369,20 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
       final remaining = current.breakSecondsRemaining - 1;
       state = current.copyWith(breakSecondsRemaining: remaining);
 
-      if (resolved.breakCueMode == BreakCueMode.beepBeforeEnd &&
-          remaining == resolved.beepLeadSeconds) {
-        unawaited(_ref.read(audioHandlerProvider).playBeep());
+      if (mode == BreakCueMode.beepBeforeEnd &&
+          remaining == beepAtRemaining &&
+          beepAtRemaining < resolved.breakSeconds) {
+        unawaited(handler.playBeep());
+      }
+
+      if (mode == BreakCueMode.ambientSong && remaining == trackFadeSeconds) {
+        unawaited(handler.fadeOutAndStopBreakTrack(fadeDuration: trackFade));
       }
 
       if (remaining <= 0) {
         timer.cancel();
-        if (resolved.breakCueMode == BreakCueMode.ambientSong) {
-          await _ref.read(audioHandlerProvider).stop();
+        if (mode == BreakCueMode.ambientSong) {
+          await handler.stopBreakTrack();
         }
         _advance();
       }
@@ -394,10 +410,11 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
     final handler = _ref.read(audioHandlerProvider);
     // During a break the countdown itself is what's "playing"; the ticker
     // checks `paused` on its own, so only real playback needs toggling.
-    if (s.phase == SessionPhase.playing ||
-        (s.phase == SessionPhase.breaking &&
-            s.currentEntry?.breakCueMode == BreakCueMode.ambientSong)) {
+    if (s.phase == SessionPhase.playing) {
       paused ? handler.pause() : unawaited(handler.play());
+    } else if (s.phase == SessionPhase.breaking &&
+        s.activeBreakCueMode == BreakCueMode.ambientSong) {
+      paused ? handler.pauseBreakTrack() : unawaited(handler.resumeBreakTrack());
     }
   }
 
@@ -407,7 +424,12 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
     if (s == null) return;
     _playTicker?.cancel();
     _breakTicker?.cancel();
-    _ref.read(audioHandlerProvider).stop();
+    final handler = _ref.read(audioHandlerProvider);
+    handler.stop();
+    if (s.phase == SessionPhase.breaking &&
+        s.activeBreakCueMode == BreakCueMode.ambientSong) {
+      handler.stopBreakTrack();
+    }
     _advance();
   }
 
@@ -432,7 +454,9 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
     _playTicker?.cancel();
     _breakTicker?.cancel();
     state = null;
-    await _ref.read(audioHandlerProvider).stop();
+    final handler = _ref.read(audioHandlerProvider);
+    await handler.stop();
+    await handler.stopBreakTrack();
     _ref.read(nowPlayingProvider.notifier).attachTrackCompleteHandler();
   }
 }

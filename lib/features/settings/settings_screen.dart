@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,13 +7,7 @@ import '../../data/providers.dart';
 import '../../data/repositories/app_settings_repository.dart';
 import '../../widgets/labeled_slider.dart';
 import '../../widgets/tab_heading.dart';
-import '../library/library_screen.dart' show librarySongsProvider;
 import 'hidden_songs_screen.dart';
-
-final _ambientSongProvider =
-    FutureProvider.autoDispose.family<Song?, String>((ref, id) {
-  return ref.watch(songRepositoryProvider).getById(id);
-});
 
 final _hiddenSongCountProvider = StreamProvider.autoDispose<int>((ref) {
   return ref
@@ -72,41 +64,161 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  void _updateDefaults(SetDefaults updated) {
-    unawaited(ref.read(setDefaultsProvider.notifier).update(updated));
-  }
+  Future<void> _editSetDefaults(BuildContext context, WidgetRef ref, SetDefaults defaults) async {
+    var tempo = defaults.tempoPercent;
+    var play = defaults.playDurationSeconds;
+    var brk = defaults.breakSeconds;
 
-  Future<void> _pickAmbientSong(SetDefaults defaults) async {
-    final song = await showModalBottomSheet<Song>(
+    await showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      builder: (context) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.7,
-        builder: (context, scrollController) => Consumer(
-          builder: (context, ref, _) {
-            final songsAsync = ref.watch(librarySongsProvider);
-            return songsAsync.when(
-              data: (songs) => songs.isEmpty
-                  ? const Center(child: Text('No songs in your library yet.'))
-                  : ListView.builder(
-                      controller: scrollController,
-                      itemCount: songs.length,
-                      itemBuilder: (context, i) => ListTile(
-                        title: Text(songs[i].title),
-                        subtitle: songs[i].artist != null ? Text(songs[i].artist!) : null,
-                        onTap: () => Navigator.of(context).pop(songs[i]),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('New set defaults'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                LabeledSlider(
+                  padding: EdgeInsets.zero,
+                  label: 'Tempo',
+                  valueLabel: '$tempo%',
+                  value: tempo.toDouble(),
+                  min: TempoLimits.minPercent.toDouble(),
+                  max: TempoLimits.maxPercent.toDouble(),
+                  divisions: TempoLimits.maxPercent - TempoLimits.minPercent,
+                  onChanged: (v) => setState(() => tempo = v.round()),
+                ),
+                LabeledSlider(
+                  padding: EdgeInsets.zero,
+                  label: 'Play duration',
+                  valueLabel: '${play}s',
+                  value: play.toDouble(),
+                  min: 15,
+                  max: 300,
+                  divisions: 57,
+                  onChanged: (v) => setState(() => play = v.round()),
+                ),
+                LabeledSlider(
+                  padding: EdgeInsets.zero,
+                  label: 'Break',
+                  valueLabel: '${brk}s',
+                  value: brk.toDouble(),
+                  min: 0,
+                  max: 120,
+                  divisions: 24,
+                  onChanged: (v) => setState(() => brk = v.round()),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                await ref.read(setDefaultsProvider.notifier).update(
+                      SetDefaults(
+                        tempoPercent: tempo,
+                        playDurationSeconds: play,
+                        breakSeconds: brk,
                       ),
-                    ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
-            );
-          },
+                    );
+                if (context.mounted) Navigator.of(context).pop();
+              },
+              child: const Text('Save'),
+            ),
+          ],
         ),
       ),
     );
-    if (song != null) {
-      _updateDefaults(defaults.copyWith(ambientSongId: song.id));
+  }
+
+  Future<void> _editFadeOutSeconds(BuildContext context, WidgetRef ref, int current) async {
+    var fade = current;
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Song fade-out'),
+          content: SingleChildScrollView(
+            child: LabeledSlider(
+              padding: EdgeInsets.zero,
+              label: 'Fade-out at cutoff',
+              valueLabel: '${fade}s',
+              value: fade.toDouble(),
+              min: 0,
+              max: 10,
+              divisions: 10,
+              onChanged: (v) => setState(() => fade = v.round()),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                await ref.read(fadeOutSecondsProvider.notifier).update(fade);
+                if (context.mounted) Navigator.of(context).pop();
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _breakCueModeLabel(String mode) {
+    switch (mode) {
+      case BreakCueMode.beepBeforeEnd:
+        return 'Silence + beeps before next song';
+      case BreakCueMode.ambientSong:
+        return 'Break audio track';
+      case BreakCueMode.silence:
+      default:
+        return 'Silence';
+    }
+  }
+
+  Future<void> _pickBreakCueMode(
+    BuildContext context,
+    WidgetRef ref,
+    String current,
+  ) async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: RadioGroup<String>(
+          groupValue: current,
+          onChanged: (v) => Navigator.of(context).pop(v),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<String>(
+                title: const Text('Silence'),
+                value: BreakCueMode.silence,
+              ),
+              RadioListTile<String>(
+                title: const Text('Silence + beeps before next song'),
+                value: BreakCueMode.beepBeforeEnd,
+              ),
+              RadioListTile<String>(
+                title: const Text('Break audio track'),
+                value: BreakCueMode.ambientSong,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (selected != null && selected != current) {
+      await ref.read(breakCueModeProvider.notifier).update(selected);
     }
   }
 
@@ -147,99 +259,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final defaults = ref.watch(setDefaultsProvider);
     final rootFolder = ref.watch(musicRootFolderProvider);
+    final breakCueMode = ref.watch(breakCueModeProvider);
+    final fadeOutSeconds = ref.watch(fadeOutSecondsProvider);
     final hiddenCount = ref.watch(_hiddenSongCountProvider).valueOrNull;
 
     return Scaffold(
       appBar: AppBar(title: const TabHeading('Settings')),
       body: ListView(
         children: [
-          const _SectionHeader('New set defaults'),
-          LabeledSlider(
-            label: 'Tempo',
-            valueLabel: '${defaults.tempoPercent}%',
-            value: defaults.tempoPercent.toDouble(),
-            min: TempoLimits.minPercent.toDouble(),
-            max: TempoLimits.maxPercent.toDouble(),
-            divisions: TempoLimits.maxPercent - TempoLimits.minPercent,
-            onChanged: (v) => _updateDefaults(defaults.copyWith(tempoPercent: v.round())),
-          ),
-          LabeledSlider(
-            label: 'Play duration',
-            valueLabel: '${defaults.playDurationSeconds}s',
-            value: defaults.playDurationSeconds.toDouble(),
-            min: 15,
-            max: 300,
-            divisions: 57,
-            onChanged: (v) =>
-                _updateDefaults(defaults.copyWith(playDurationSeconds: v.round())),
-          ),
-          LabeledSlider(
-            label: 'Break',
-            valueLabel: '${defaults.breakSeconds}s',
-            value: defaults.breakSeconds.toDouble(),
-            min: 0,
-            max: 120,
-            divisions: 24,
-            onChanged: (v) => _updateDefaults(defaults.copyWith(breakSeconds: v.round())),
-          ),
-          LabeledSlider(
-            label: 'Fade-out at cutoff',
-            valueLabel: '${defaults.fadeOutSeconds}s',
-            value: defaults.fadeOutSeconds.toDouble(),
-            min: 0,
-            max: 10,
-            divisions: 10,
-            onChanged: (v) => _updateDefaults(defaults.copyWith(fadeOutSeconds: v.round())),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Text('Break cue', style: Theme.of(context).textTheme.bodyLarge),
-          ),
-          RadioGroup<String>(
-            groupValue: defaults.breakCueMode,
-            onChanged: (v) => _updateDefaults(defaults.copyWith(breakCueMode: v)),
-            child: const Column(
-              children: [
-                RadioListTile<String>(
-                  title: Text('Silence'),
-                  value: BreakCueMode.silence,
-                ),
-                RadioListTile<String>(
-                  title: Text('Silence + beeps before next song'),
-                  value: BreakCueMode.beepBeforeEnd,
-                ),
-                RadioListTile<String>(
-                  title: Text('Break audio track'),
-                  value: BreakCueMode.ambientSong,
-                ),
-              ],
+          const _SectionHeader('Sets'),
+          ListTile(
+            title: const Text('New set defaults'),
+            subtitle: Text(
+              'Tempo ${defaults.tempoPercent}% \u00b7 Play ${defaults.playDurationSeconds}s \u00b7 '
+              'Break ${defaults.breakSeconds}s',
             ),
+            onTap: () => _editSetDefaults(context, ref, defaults),
           ),
-          if (defaults.breakCueMode == BreakCueMode.beepBeforeEnd)
-            LabeledSlider(
-              label: 'Beep lead time',
-              valueLabel: '${defaults.beepLeadSeconds}s before next song',
-              value: defaults.beepLeadSeconds.toDouble().clamp(0, defaults.breakSeconds.toDouble()),
-              min: 0,
-              max: defaults.breakSeconds.toDouble().clamp(1, double.infinity),
-              divisions: defaults.breakSeconds.clamp(1, 999),
-              onChanged: (v) =>
-                  _updateDefaults(defaults.copyWith(beepLeadSeconds: v.round())),
-            ),
-          if (defaults.breakCueMode == BreakCueMode.ambientSong)
-            Builder(
-              builder: (context) {
-                final ambientId = defaults.ambientSongId;
-                final ambientSong = ambientId == null
-                    ? null
-                    : ref.watch(_ambientSongProvider(ambientId)).valueOrNull;
-                return ListTile(
-                  title: Text(ambientSong?.title ?? 'Choose a track'),
-                  subtitle: const Text('Break audio track'),
-                  onTap: () => _pickAmbientSong(defaults),
-                );
-              },
-            ),
+          ListTile(
+            title: const Text('Song fade-out'),
+            subtitle: Text('${fadeOutSeconds}s at cutoff'),
+            onTap: () => _editFadeOutSeconds(context, ref, fadeOutSeconds),
+          ),
+          ListTile(
+            title: const Text('Break cue'),
+            subtitle: Text(_breakCueModeLabel(breakCueMode)),
+            onTap: () => _pickBreakCueMode(context, ref, breakCueMode),
+          ),
           const Divider(),
           const _SectionHeader('Library'),
           ListTile(

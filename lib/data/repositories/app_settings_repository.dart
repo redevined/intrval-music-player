@@ -14,37 +14,21 @@ class SetDefaults {
     required this.tempoPercent,
     required this.playDurationSeconds,
     required this.breakSeconds,
-    required this.fadeOutSeconds,
-    required this.breakCueMode,
-    required this.beepLeadSeconds,
-    this.ambientSongId,
   });
 
   final int tempoPercent;
   final int playDurationSeconds;
   final int breakSeconds;
-  final int fadeOutSeconds;
-  final String breakCueMode;
-  final int beepLeadSeconds;
-  final String? ambientSongId;
 
   SetDefaults copyWith({
     int? tempoPercent,
     int? playDurationSeconds,
     int? breakSeconds,
-    int? fadeOutSeconds,
-    String? breakCueMode,
-    int? beepLeadSeconds,
-    String? ambientSongId,
   }) {
     return SetDefaults(
       tempoPercent: tempoPercent ?? this.tempoPercent,
       playDurationSeconds: playDurationSeconds ?? this.playDurationSeconds,
       breakSeconds: breakSeconds ?? this.breakSeconds,
-      fadeOutSeconds: fadeOutSeconds ?? this.fadeOutSeconds,
-      breakCueMode: breakCueMode ?? this.breakCueMode,
-      beepLeadSeconds: beepLeadSeconds ?? this.beepLeadSeconds,
-      ambientSongId: ambientSongId ?? this.ambientSongId,
     );
   }
 }
@@ -59,10 +43,8 @@ class AppSettingsRepository {
   static const _kTempo = 'default_tempo_percent';
   static const _kPlay = 'default_play_duration_seconds';
   static const _kBreak = 'default_break_seconds';
-  static const _kFade = 'default_fade_out_seconds';
-  static const _kBreakCueMode = 'default_break_cue_mode';
-  static const _kBeepLead = 'default_beep_lead_seconds';
-  static const _kAmbientSongId = 'default_ambient_song_id';
+  static const _kFade = 'fade_out_seconds';
+  static const _kBreakCueMode = 'break_cue_mode';
   static const _kMusicRootFolder = 'music_root_folder';
 
   String get musicRootFolder =>
@@ -86,26 +68,27 @@ class AppSettingsRepository {
         playDurationSeconds:
             _prefs.getInt(_kPlay) ?? AppDefaults.playDurationSeconds,
         breakSeconds: _prefs.getInt(_kBreak) ?? AppDefaults.breakSeconds,
-        fadeOutSeconds: _prefs.getInt(_kFade) ?? AppDefaults.fadeOutSeconds,
-        breakCueMode: _prefs.getString(_kBreakCueMode) ?? BreakCueMode.silence,
-        beepLeadSeconds:
-            _prefs.getInt(_kBeepLead) ?? AppDefaults.beepLeadSeconds,
-        ambientSongId: _prefs.getString(_kAmbientSongId),
       );
 
   Future<void> saveSetDefaults(SetDefaults d) async {
     await _prefs.setInt(_kTempo, d.tempoPercent);
     await _prefs.setInt(_kPlay, d.playDurationSeconds);
     await _prefs.setInt(_kBreak, d.breakSeconds);
-    await _prefs.setInt(_kFade, d.fadeOutSeconds);
-    await _prefs.setString(_kBreakCueMode, d.breakCueMode);
-    await _prefs.setInt(_kBeepLead, d.beepLeadSeconds);
-    if (d.ambientSongId != null) {
-      await _prefs.setString(_kAmbientSongId, d.ambientSongId!);
-    } else {
-      await _prefs.remove(_kAmbientSongId);
-    }
   }
+
+  /// The break cue is a single global behavior (not per-set) - how rarely
+  /// it's changed doesn't warrant re-deciding it for every practice set.
+  String get breakCueMode =>
+      _prefs.getString(_kBreakCueMode) ?? BreakCueMode.silence;
+
+  Future<void> saveBreakCueMode(String mode) =>
+      _prefs.setString(_kBreakCueMode, mode);
+
+  /// Also a single global behavior, for the same reason as [breakCueMode].
+  int get fadeOutSeconds => _prefs.getInt(_kFade) ?? AppDefaults.fadeOutSeconds;
+
+  Future<void> saveFadeOutSeconds(int seconds) =>
+      _prefs.setInt(_kFade, seconds);
 }
 
 class SetDefaultsController extends StateNotifier<SetDefaults> {
@@ -125,5 +108,25 @@ class MusicRootFolderController extends StateNotifier<String> {
   Future<void> update(String path) async {
     state = path;
     await _repo.saveMusicRootFolder(path);
+  }
+}
+
+class BreakCueModeController extends StateNotifier<String> {
+  BreakCueModeController(this._repo) : super(_repo.breakCueMode);
+  final AppSettingsRepository _repo;
+
+  Future<void> update(String mode) async {
+    state = mode;
+    await _repo.saveBreakCueMode(mode);
+  }
+}
+
+class FadeOutSecondsController extends StateNotifier<int> {
+  FadeOutSecondsController(this._repo) : super(_repo.fadeOutSeconds);
+  final AppSettingsRepository _repo;
+
+  Future<void> update(int seconds) async {
+    state = seconds;
+    await _repo.saveFadeOutSeconds(seconds);
   }
 }

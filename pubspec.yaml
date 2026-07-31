@@ -119,7 +119,8 @@ flutter:
 
   assets:
     - assets/app_icon_rounded.png
-    - assets/sounds/beep.wav
+    - assets/sounds/beeps.mp3
+    - assets/sounds/break_audio_track.mp3
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

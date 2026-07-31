@@ -5,6 +5,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:intrval_music_player/data/database/database.dart';
 import 'package:intrval_music_player/data/providers.dart';
@@ -57,6 +58,33 @@ class FakeAudioHandler implements AudioPlayerHandler {
   @override
   Future<void> fadeOutAndStop(Duration duration) async => stop();
 
+  bool breakTrackPlaying = false;
+  int breakTrackFadeOutCount = 0;
+  int breakTrackStopCount = 0;
+
+  @override
+  Future<void> playBreakTrack({Duration fadeDuration = const Duration(seconds: 2)}) async {
+    breakTrackPlaying = true;
+  }
+
+  @override
+  Future<void> fadeOutAndStopBreakTrack({Duration fadeDuration = const Duration(seconds: 2)}) async {
+    breakTrackFadeOutCount++;
+    breakTrackPlaying = false;
+  }
+
+  @override
+  Future<void> stopBreakTrack() async {
+    breakTrackStopCount++;
+    breakTrackPlaying = false;
+  }
+
+  @override
+  void pauseBreakTrack() {}
+
+  @override
+  Future<void> resumeBreakTrack() async {}
+
   @override
   Future<void> seek(Duration position) async {}
 
@@ -89,9 +117,12 @@ void main() {
   setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     handler = FakeAudioHandler();
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
     container = ProviderContainer(overrides: [
       databaseProvider.overrideWithValue(db),
       audioHandlerProvider.overrideWithValue(handler),
+      sharedPreferencesProvider.overrideWithValue(prefs),
     ]);
     harness = PracticeSetRepositoryHarness(container);
   });
@@ -167,13 +198,29 @@ void main() {
     expect(session()!.phase, SessionPhase.complete);
   });
 
-  test('the break-cue beep plays through the handler at the configured lead time',
+  test('a zero-second break is skipped entirely - no cue plays, straight to the next entry',
       () async {
+    await container.read(breakCueModeProvider.notifier).update(BreakCueMode.beepBeforeEnd);
+    final set =
+        await harness.createSetWithEntries(['Waltz', 'Tango'], breakSeconds: 0);
+    await controller().start(set);
+
+    handler.onTrackComplete!();
+    await pumpEventQueue();
+
+    final s = session()!;
+    expect(s.entryIndex, 1);
+    expect(s.phase, isNot(SessionPhase.breaking));
+    expect(handler.beepCount, 0);
+    expect(handler.breakTrackPlaying, isFalse);
+  });
+
+  test('the break-cue beep plays through the handler at a fixed lead time before the break ends',
+      () async {
+    await container.read(breakCueModeProvider.notifier).update(BreakCueMode.beepBeforeEnd);
     final set = await harness.createSetWithEntries(
       ['Waltz', 'Tango'],
-      breakSeconds: 3,
-      breakCueMode: BreakCueMode.beepBeforeEnd,
-      beepLeadSeconds: 2,
+      breakSeconds: 8,
     );
     await controller().start(set);
 
@@ -182,9 +229,50 @@ void main() {
     expect(session()!.phase, SessionPhase.breaking);
     expect(handler.beepCount, 0);
 
-    await Future<void>.delayed(const Duration(milliseconds: 1100));
-    expect(session()!.breakSecondsRemaining, 2);
+    // Fixed 5s lead time (AppDefaults.beepLeadSeconds) - not configurable.
+    await Future<void>.delayed(const Duration(milliseconds: 3100));
+    expect(session()!.breakSecondsRemaining, 5);
     expect(handler.beepCount, 1);
+  });
+
+  test('the beep fires immediately if the break itself is shorter than the fixed lead time',
+      () async {
+    await container.read(breakCueModeProvider.notifier).update(BreakCueMode.beepBeforeEnd);
+    final set = await harness.createSetWithEntries(
+      ['Waltz', 'Tango'],
+      breakSeconds: 3,
+    );
+    await controller().start(set);
+
+    handler.onTrackComplete!();
+    await pumpEventQueue();
+    expect(session()!.phase, SessionPhase.breaking);
+    expect(handler.beepCount, 1);
+  });
+
+  test('the break audio track fades in at break start and fades out before it ends',
+      () async {
+    await container.read(breakCueModeProvider.notifier).update(BreakCueMode.ambientSong);
+    final set = await harness.createSetWithEntries(
+      ['Waltz', 'Tango'],
+      breakSeconds: 8,
+    );
+    await controller().start(set);
+
+    handler.onTrackComplete!();
+    await pumpEventQueue();
+    expect(session()!.phase, SessionPhase.breaking);
+    expect(handler.breakTrackPlaying, isTrue);
+
+    // trackFadeSeconds = min(2, 8 ~/ 2) = 2, so fade-out starts at
+    // breakSecondsRemaining == 2, i.e. after 6 ticks.
+    await Future<void>.delayed(const Duration(milliseconds: 6100));
+    expect(session()!.breakSecondsRemaining, 2);
+    expect(handler.breakTrackFadeOutCount, 1);
+
+    await Future<void>.delayed(const Duration(milliseconds: 2100));
+    expect(session()!.entryIndex, 1);
+    expect(handler.breakTrackStopCount, 1);
   });
 
   test('session state outlives its listeners, so leaving the screen keeps it',
@@ -301,8 +389,6 @@ class PracticeSetRepositoryHarness {
     int? breakSeconds,
     int? tempoPercent,
     int? playDurationSeconds,
-    String? breakCueMode,
-    int? beepLeadSeconds,
     bool emptyFirstEntry = false,
   }) async {
     final songs = _container.read(songRepositoryProvider);
@@ -324,11 +410,7 @@ class PracticeSetRepositoryHarness {
         label: entryLabels[i],
         playlistId: useEmpty ? emptyPlaylistId : playlistId,
       );
-      if (breakSeconds != null ||
-          tempoPercent != null ||
-          playDurationSeconds != null ||
-          breakCueMode != null ||
-          beepLeadSeconds != null) {
+      if (breakSeconds != null || tempoPercent != null || playDurationSeconds != null) {
         await sets.updateEntry(
           entryId,
           SetEntriesCompanion(
@@ -338,11 +420,6 @@ class PracticeSetRepositoryHarness {
                 tempoPercent != null ? Value(tempoPercent) : const Value.absent(),
             playDurationSeconds: playDurationSeconds != null
                 ? Value(playDurationSeconds)
-                : const Value.absent(),
-            breakCueMode:
-                breakCueMode != null ? Value(breakCueMode) : const Value.absent(),
-            beepLeadSeconds: beepLeadSeconds != null
-                ? Value(beepLeadSeconds)
                 : const Value.absent(),
           ),
         );
