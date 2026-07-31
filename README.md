@@ -11,13 +11,12 @@ song from each in turn, with per-entry control over tempo, play duration
 ## Features
 
 - **Practice Sets** - ordered sequences of playlist/folder entries, played
-  top to bottom with configurable tempo, play duration, break, and fade-out,
+  top to bottom with configurable tempo, play and break duration,
   overridable per entry.
 - **Standard Player** - play any song, playlist, or folder on demand, with
   the same pitch-preserving tempo control (70%-130%, 1% steps).
 - **Playlists** - create, reorder, and manage hand-picked song lists.
-- **Library** - import local folders (via Android's Storage Access
-  Framework) or individual files, with search/sort/filter, including by BPM.
+- **Library** - import and play local music, with search/sort/filter, including by BPM.
 - **On-device BPM detection** - no network calls; estimates tempo via
   amplitude-envelope autocorrelation, with manual override/correction.
 - **Background playback** - lock-screen/notification media controls via
@@ -53,7 +52,7 @@ lib/
 
 ## Getting started
 
-### Prerequisites
+### Prerequisites (Mac OS)
 
 - Flutter SDK (stable channel).
 - Android SDK (`cmdline-tools`, `platform-tools`, a platform image, and
@@ -92,3 +91,7 @@ flutter build apk --debug   # produces build/app/outputs/flutter-apk/app-debug.a
   encountered so far and how they were fixed.
 - [`docs/IOS_ROADMAP.md`](docs/IOS_ROADMAP.md) - what's Android-specific
   today and what would need to change to support iOS.
+
+## License
+
+MIT - see [`LICENSE`](LICENSE).

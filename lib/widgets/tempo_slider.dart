@@ -9,16 +9,25 @@ class TempoSlider extends StatelessWidget {
     super.key,
     required this.percent,
     required this.onChanged,
+    this.baseBpm,
   });
 
   final int percent;
   final ValueChanged<int> onChanged;
+
+  /// The track's own BPM (i.e. at 100% tempo), if known. Shown scaled by
+  /// [percent] so it reflects the tempo actually being played, sparing the
+  /// player screens from needing a separate (redundant) tempo readout of
+  /// their own.
+  final double? baseBpm;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final isDefault = percent == AppDefaults.tempoPercent;
+    final bpm = baseBpm;
+    final effectiveBpm = bpm == null ? null : bpm * percent / 100;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 8, 12),
@@ -40,6 +49,15 @@ class TempoSlider extends StatelessWidget {
                 ),
               ),
               const Spacer(),
+              if (effectiveBpm != null) ...[
+                Text(
+                  '${effectiveBpm.round()} BPM',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
               _ValuePill(percent: percent, emphasized: !isDefault),
               IconButton(
                 tooltip: 'Reset to ${AppDefaults.tempoPercent}%',

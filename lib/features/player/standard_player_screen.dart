@@ -68,11 +68,7 @@ class _StandardPlayerScreenState extends ConsumerState<StandardPlayerScreen> {
 
     return PlayerShell(
       appBarTitle: nowPlaying.queueTitle ?? 'Now Playing',
-      artwork: PlayerArtwork(
-        badge: nowPlaying.tempoPercent != 100
-            ? Text('${nowPlaying.tempoPercent}% tempo')
-            : null,
-      ),
+      artwork: const PlayerArtwork(),
       contextHeader: nowPlaying.songs.length > 1
           ? _QueuePositionLabel(
               index: nowPlaying.index,
@@ -94,6 +90,7 @@ class _StandardPlayerScreenState extends ConsumerState<StandardPlayerScreen> {
       tempo: TempoSlider(
         percent: nowPlaying.tempoPercent,
         onChanged: controller.setTempo,
+        baseBpm: song.bpmManual ?? song.bpmDetected,
       ),
       controls: Row(
         mainAxisAlignment: MainAxisAlignment.center,

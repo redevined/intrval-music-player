@@ -177,6 +177,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
           ? null
           : TempoSlider(
               percent: session.tempoPercent,
+              baseBpm: session.currentSong?.bpmManual ?? session.currentSong?.bpmDetected,
               onChanged: (percent) {
                 // The marker's remaining distance is covered at the new
                 // tempo, not the old one, so it has to be re-projected from

@@ -333,12 +333,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const Divider(),
           const _SectionHeader('About'),
-          const AboutListTile(
-            applicationName: 'intrval',
-            applicationVersion: '1.0.0',
-            aboutBoxChildren: [
-              Text('A tempo-controlled practice-set music player for dancers.'),
-            ],
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('About intrval'),
+            onTap: () => showDialog<void>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('intrval'),
+                content: const Text(
+                  'Version 1.0.0\n\n'
+                  'A tempo-controlled practice-set music player for dancers.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Close'),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
