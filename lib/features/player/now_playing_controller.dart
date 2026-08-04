@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
+import '../../services/notification_permission.dart';
 import 'practice_session_controller.dart';
 
 enum QueueRepeatMode { off, all, one }
@@ -85,6 +86,7 @@ class NowPlayingController extends StateNotifier<NowPlayingState?> {
 
   Future<void> playQueue(List<Song> songs, int initialIndex, {String? queueTitle}) async {
     if (songs.isEmpty) return;
+    unawaited(ensureNotificationPermission());
     // Ad-hoc playback and a timed practice set can't share the one audio
     // handler, so starting a queue ends any running session.
     await _ref.read(practiceSessionProvider.notifier).stop();

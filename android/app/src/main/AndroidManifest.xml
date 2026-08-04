@@ -8,6 +8,11 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
+    <!-- Android 13+ requires runtime opt-in for the media playback
+         notification (see MusicLibraryScanner/NowPlayingController's
+         permission requests); without it the OS silently drops the
+         notification even though playback itself keeps working. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <application
         android:label="intrval"

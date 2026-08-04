@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
+import '../../services/notification_permission.dart';
 import 'now_playing_controller.dart';
 
 enum SessionPhase { loading, playing, breaking, complete }
@@ -149,6 +150,7 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
   /// already using the shared audio handler.
   Future<void> start(PracticeSet practiceSet) async {
     _generation++;
+    unawaited(ensureNotificationPermission());
     _playTicker?.cancel();
     _breakTicker?.cancel();
 
