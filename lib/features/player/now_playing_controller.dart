@@ -43,12 +43,14 @@ class NowPlayingState {
 
   Song get currentSong => songs[order[index]];
 
-  /// True whenever advancing makes sense - either there's a later track, or
-  /// repeat-all means "next" wraps back around to the first one.
-  bool get hasNext => repeatMode == QueueRepeatMode.all || index < order.length - 1;
+  /// True whenever pressing "next" does something - either there's a later
+  /// track, repeat-all means it wraps back around to the first one, or
+  /// repeat-one means it restarts the current track.
+  bool get hasNext => repeatMode != QueueRepeatMode.off || index < order.length - 1;
   bool get hasPrevious => index > 0;
 
   NowPlayingState copyWith({
+    List<Song>? songs,
     List<int>? order,
     int? index,
     int? tempoPercent,
@@ -56,7 +58,7 @@ class NowPlayingState {
     QueueRepeatMode? repeatMode,
   }) {
     return NowPlayingState(
-      songs: songs,
+      songs: songs ?? this.songs,
       order: order ?? this.order,
       index: index ?? this.index,
       tempoPercent: tempoPercent ?? this.tempoPercent,
@@ -125,8 +127,7 @@ class NowPlayingController extends StateNotifier<NowPlayingState?> {
 
   /// Auto-advance when a track finishes on its own (as opposed to the user
   /// tapping "next") - repeat-one replays the same track instead of
-  /// advancing, which [next] deliberately does not do (a user-pressed skip
-  /// should always move forward, even mid repeat-one).
+  /// advancing, same as a user-pressed [next] in that mode.
   Future<void> _onTrackComplete() async {
     final s = state;
     if (s == null) return;
@@ -137,21 +138,31 @@ class NowPlayingController extends StateNotifier<NowPlayingState?> {
     await next();
   }
 
+  /// Repeat-one locks playback to the current track, so a user-pressed
+  /// "next" restarts it instead of advancing - same as [previous] in that
+  /// mode.
   Future<void> next() async {
     final s = state;
     if (s == null || !s.hasNext) return;
+    if (s.repeatMode == QueueRepeatMode.one) {
+      await _ref.read(audioHandlerProvider).seek(Duration.zero);
+      return;
+    }
     final nextIndex = s.index + 1 >= s.order.length ? 0 : s.index + 1;
     state = s.copyWith(index: nextIndex);
     await _loadCurrent();
   }
 
   /// Standard player UX: restart the current track if it's more than a few
-  /// seconds in; only skip to the actual previous track otherwise.
+  /// seconds in; only skip to the actual previous track otherwise. Under
+  /// repeat-one, always restarts - the queue shouldn't move at all.
   Future<void> previous() async {
     final s = state;
     if (s == null) return;
     final handler = _ref.read(audioHandlerProvider);
-    if (handler.position > const Duration(seconds: 3) || !s.hasPrevious) {
+    if (s.repeatMode == QueueRepeatMode.one ||
+        handler.position > const Duration(seconds: 3) ||
+        !s.hasPrevious) {
       await handler.seek(Duration.zero);
       return;
     }
@@ -182,6 +193,23 @@ class NowPlayingController extends StateNotifier<NowPlayingState?> {
     final anchor = s.index.clamp(0, rest.length);
     final shuffled = [...rest]..insert(anchor, currentSongIndex);
     state = s.copyWith(order: shuffled, shuffleEnabled: true);
+  }
+
+  /// Toggles the current track's favorite flag. `NowPlayingState.songs` is a
+  /// snapshot taken when the queue started (unlike the Library/Playlist
+  /// screens, which rebuild straight from a DB stream), so the DB write
+  /// alone wouldn't make the player's heart icon flip - patch the local
+  /// copy too so it updates immediately.
+  Future<void> toggleFavoriteCurrent() async {
+    final s = state;
+    if (s == null) return;
+    final songIndex = s.order[s.index];
+    final song = s.songs[songIndex];
+    final favorite = !song.isFavorite;
+    await _ref.read(songRepositoryProvider).setFavorite(song.id, favorite);
+    final updatedSongs = [...s.songs];
+    updatedSongs[songIndex] = song.copyWith(isFavorite: favorite);
+    state = s.copyWith(songs: updatedSongs);
   }
 
   void cycleRepeatMode() {

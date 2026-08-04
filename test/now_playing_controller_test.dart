@@ -15,6 +15,7 @@ import 'package:intrval_music_player/services/audio_player_service.dart';
 /// loudly.
 class FakeAudioHandler implements AudioPlayerHandler {
   final loadedUris = <String>[];
+  final seekPositions = <Duration>[];
   bool playing = false;
 
   @override
@@ -42,7 +43,9 @@ class FakeAudioHandler implements AudioPlayerHandler {
   Future<void> setTempoPercent(double percent) async {}
 
   @override
-  Future<void> seek(Duration position) async {}
+  Future<void> seek(Duration position) async {
+    seekPositions.add(position);
+  }
 
   @override
   Duration get position => Duration.zero;
@@ -144,6 +147,15 @@ void main() {
     expect(state()!.repeatMode, QueueRepeatMode.off);
   });
 
+  test('hasNext is true under repeat-one even on the last track (Next restarts it)', () async {
+    final songs = await importSongs(2);
+    await controller().playQueue(songs, 1);
+    controller().cycleRepeatMode(); // -> all
+    controller().cycleRepeatMode(); // -> one
+
+    expect(state()!.hasNext, isTrue);
+  });
+
   test('repeat-all wraps next() back to the first track at the end', () async {
     final songs = await importSongs(3);
     await controller().playQueue(songs, 2);
@@ -173,15 +185,33 @@ void main() {
     );
   });
 
-  test('a user-pressed next() still advances during repeat-one (unlike auto-complete)', () async {
-    final songs = await importSongs(2);
+  test('next() during repeat-one restarts the current track instead of advancing', () async {
+    final songs = await importSongs(3);
     await controller().playQueue(songs, 0);
     controller().cycleRepeatMode(); // -> all
     controller().cycleRepeatMode(); // -> one
+    expect(state()!.hasNext, isTrue, reason: 'next always restarts under repeat-one');
+    final loadedBefore = handler.loadedUris.length;
 
     await controller().next();
 
-    expect(state()!.currentSong.uri, '/music/1.mp3');
+    expect(state()!.currentSong.uri, '/music/0.mp3', reason: 'must not have advanced');
+    expect(handler.loadedUris.length, loadedBefore, reason: 'a restart is a seek, not a reload');
+    expect(handler.seekPositions, [Duration.zero]);
+  });
+
+  test('previous() during repeat-one always restarts, even with an earlier track available', () async {
+    final songs = await importSongs(3);
+    await controller().playQueue(songs, 1);
+    controller().cycleRepeatMode(); // -> all
+    controller().cycleRepeatMode(); // -> one
+    final loadedBefore = handler.loadedUris.length;
+
+    await controller().previous();
+
+    expect(state()!.currentSong.uri, '/music/1.mp3', reason: 'must not have moved to track 0');
+    expect(handler.loadedUris.length, loadedBefore, reason: 'a restart is a seek, not a reload');
+    expect(handler.seekPositions, [Duration.zero]);
   });
 
   test('auto-complete advances normally when repeat is off', () async {
@@ -223,5 +253,27 @@ void main() {
     expect(s.shuffleEnabled, isFalse);
     expect(s.order, List.generate(songs.length, (i) => i));
     expect(s.currentSong.uri, currentBefore);
+  });
+
+  test(
+      'toggleFavoriteCurrent flips the in-memory currentSong (not just the DB '
+      'row), so the player heart icon updates immediately', () async {
+    final songs = await importSongs(2);
+    await controller().playQueue(songs, 0);
+    expect(state()!.currentSong.isFavorite, isFalse);
+
+    await controller().toggleFavoriteCurrent();
+    expect(
+      state()!.currentSong.isFavorite,
+      isTrue,
+      reason: 'NowPlayingState.songs is a startup snapshot, not backed by a '
+          'DB stream - the controller must patch its own copy',
+    );
+
+    final persisted = await container.read(songRepositoryProvider).getById(songs[0].id);
+    expect(persisted!.isFavorite, isTrue);
+
+    await controller().toggleFavoriteCurrent();
+    expect(state()!.currentSong.isFavorite, isFalse);
   });
 }

@@ -72,9 +72,7 @@ class _StandardPlayerScreenState extends ConsumerState<StandardPlayerScreen> {
         IconButton(
           tooltip: song.isFavorite ? 'Unfavorite' : 'Favorite',
           icon: Icon(song.isFavorite ? Icons.favorite : Icons.favorite_border),
-          onPressed: () => ref
-              .read(songRepositoryProvider)
-              .setFavorite(song.id, !song.isFavorite),
+          onPressed: controller.toggleFavoriteCurrent,
         ),
       ],
       artwork: const PlayerArtwork(),
@@ -102,84 +100,94 @@ class _StandardPlayerScreenState extends ConsumerState<StandardPlayerScreen> {
         baseBpm: song.bpmManual ?? song.bpmDetected,
       ),
       controls: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          TransportButton(
-            icon: Icons.skip_previous_rounded,
-            tooltip: 'Previous',
-            onPressed: controller.previous,
+          if (nowPlaying.songs.length > 1)
+            _ShuffleButton(
+              enabled: nowPlaying.shuffleEnabled,
+              onPressed: controller.toggleShuffle,
+            )
+          else
+            const SizedBox(width: 48),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TransportButton(
+                icon: Icons.skip_previous_rounded,
+                tooltip: 'Previous',
+                onPressed: controller.previous,
+              ),
+              const SizedBox(width: 20),
+              StreamBuilder<PlaybackState>(
+                stream: handler.playbackState,
+                builder: (context, snapshot) {
+                  return PlayPauseButton(
+                    playing: snapshot.data?.playing ?? false,
+                    onPressed: controller.togglePlayPause,
+                  );
+                },
+              ),
+              const SizedBox(width: 20),
+              TransportButton(
+                icon: Icons.skip_next_rounded,
+                tooltip: 'Next',
+                onPressed: nowPlaying.hasNext ? controller.next : null,
+              ),
+            ],
           ),
-          const SizedBox(width: 20),
-          StreamBuilder<PlaybackState>(
-            stream: handler.playbackState,
-            builder: (context, snapshot) {
-              return PlayPauseButton(
-                playing: snapshot.data?.playing ?? false,
-                onPressed: controller.togglePlayPause,
-              );
-            },
-          ),
-          const SizedBox(width: 20),
-          TransportButton(
-            icon: Icons.skip_next_rounded,
-            tooltip: 'Next',
-            onPressed: nowPlaying.hasNext ? controller.next : null,
-          ),
+          if (nowPlaying.songs.length > 1)
+            _RepeatButton(
+              mode: nowPlaying.repeatMode,
+              onPressed: controller.cycleRepeatMode,
+            )
+          else
+            const SizedBox(width: 48),
         ],
       ),
-      footer: nowPlaying.songs.length > 1
-          ? _ShuffleRepeatRow(
-              shuffleEnabled: nowPlaying.shuffleEnabled,
-              onToggleShuffle: controller.toggleShuffle,
-              repeatMode: nowPlaying.repeatMode,
-              onCycleRepeat: controller.cycleRepeatMode,
-            )
-          : null,
     );
   }
 }
 
-class _ShuffleRepeatRow extends StatelessWidget {
-  const _ShuffleRepeatRow({
-    required this.shuffleEnabled,
-    required this.onToggleShuffle,
-    required this.repeatMode,
-    required this.onCycleRepeat,
-  });
+Color _queueIconColor(BuildContext context, bool active) {
+  final colors = Theme.of(context).colorScheme;
+  return active ? colors.primary : colors.onSurfaceVariant;
+}
 
-  final bool shuffleEnabled;
-  final VoidCallback onToggleShuffle;
-  final QueueRepeatMode repeatMode;
-  final VoidCallback onCycleRepeat;
+class _ShuffleButton extends StatelessWidget {
+  const _ShuffleButton({required this.enabled, required this.onPressed});
+
+  final bool enabled;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    return IconButton(
+      tooltip: enabled ? 'Shuffle on' : 'Shuffle off',
+      icon: Icon(Icons.shuffle_rounded, color: _queueIconColor(context, enabled)),
+      onPressed: onPressed,
+    );
+  }
+}
 
-    Color iconColor(bool active) => active ? colors.primary : colors.onSurfaceVariant;
+class _RepeatButton extends StatelessWidget {
+  const _RepeatButton({required this.mode, required this.onPressed});
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        IconButton(
-          tooltip: shuffleEnabled ? 'Shuffle on' : 'Shuffle off',
-          icon: Icon(Icons.shuffle_rounded, color: iconColor(shuffleEnabled)),
-          onPressed: onToggleShuffle,
-        ),
-        const SizedBox(width: 24),
-        IconButton(
-          tooltip: switch (repeatMode) {
-            QueueRepeatMode.off => 'Repeat off',
-            QueueRepeatMode.all => 'Repeat all',
-            QueueRepeatMode.one => 'Repeat one',
-          },
-          icon: Icon(
-            repeatMode == QueueRepeatMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
-            color: iconColor(repeatMode != QueueRepeatMode.off),
-          ),
-          onPressed: onCycleRepeat,
-        ),
-      ],
+  final QueueRepeatMode mode;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: switch (mode) {
+        QueueRepeatMode.off => 'Repeat off',
+        QueueRepeatMode.all => 'Repeat all',
+        QueueRepeatMode.one => 'Repeat one',
+      },
+      icon: Icon(
+        mode == QueueRepeatMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
+        color: _queueIconColor(context, mode != QueueRepeatMode.off),
+      ),
+      onPressed: onPressed,
     );
   }
 }
