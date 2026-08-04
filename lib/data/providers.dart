@@ -124,10 +124,24 @@ final practiceSetRepositoryProvider = Provider<PracticeSetRepository>((ref) {
 });
 
 final musicLibraryScannerProvider = Provider<MusicLibraryScanner>((ref) {
-  return MusicLibraryScanner(
+  final scanner = MusicLibraryScanner(
     ref.watch(songRepositoryProvider),
     ref.watch(fileImportServiceProvider),
     ref.watch(bpmDetectionServiceProvider),
     roots: [ref.watch(musicRootFolderProvider)],
   );
+  ref.onDispose(scanner.dispose);
+  return scanner;
+});
+
+/// (total songs, songs still missing a BPM) for the Settings > Library
+/// analysis-status entry - see [SongRepository.watchBpmProgress].
+final bpmProgressProvider = StreamProvider.autoDispose<(int, int)>((ref) {
+  return ref.watch(songRepositoryProvider).watchBpmProgress();
+});
+
+/// Whether the scanner's background BPM pass is currently running - see
+/// [MusicLibraryScanner.analyzingStream].
+final bpmAnalyzingProvider = StreamProvider.autoDispose<bool>((ref) {
+  return ref.watch(musicLibraryScannerProvider).analyzingStream;
 });

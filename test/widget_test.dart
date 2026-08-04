@@ -20,6 +20,18 @@ import 'package:intrval_music_player/services/music_library_scanner.dart';
 class _NoopMusicLibraryScanner implements MusicLibraryScanner {
   @override
   Future<void> scan() async {}
+
+  @override
+  Future<void> retryUnanalyzed() async {}
+
+  @override
+  bool get isAnalyzing => false;
+
+  @override
+  Stream<bool> get analyzingStream => const Stream.empty();
+
+  @override
+  void dispose() {}
 }
 
 void main() {

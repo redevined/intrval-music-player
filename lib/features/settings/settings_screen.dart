@@ -30,6 +30,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _scanning = false;
   bool _pickingFolder = false;
 
+  bool _retrying = false;
+
+  Future<void> _retryUnanalyzed() async {
+    setState(() => _retrying = true);
+    try {
+      await ref.read(musicLibraryScannerProvider).retryUnanalyzed();
+    } finally {
+      if (mounted) setState(() => _retrying = false);
+    }
+  }
+
   Future<void> _rescanLibrary() async {
     setState(() => _scanning = true);
     try {
@@ -195,6 +206,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  String _bpmProgressLabel((int, int)? progress, bool isAnalyzing) {
+    if (progress == null) return 'Loading...';
+    final (total, missing) = progress;
+    final analyzed = total - missing;
+    if (isAnalyzing) return 'Analyzing... ($analyzed/$total done)';
+    if (total == 0) return 'No songs yet';
+    if (missing == 0) return 'All $total songs analyzed';
+    return '$analyzed/$total songs analyzed';
+  }
+
   String _breakCueModeLabel(String mode) {
     switch (mode) {
       case BreakCueMode.beepBeforeEnd:
@@ -316,6 +337,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final fadeOutSeconds = ref.watch(fadeOutSecondsProvider);
     final hiddenCount = ref.watch(_hiddenSongCountProvider).valueOrNull;
     final version = ref.watch(packageInfoProvider).valueOrNull?.version;
+    final bpmProgress = ref.watch(bpmProgressProvider).valueOrNull;
+    final isAnalyzing = ref.watch(bpmAnalyzingProvider).valueOrNull ?? false;
 
     return Scaffold(
       appBar: AppBar(title: const TabHeading('Settings')),
@@ -362,6 +385,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   : "Imports any new songs added to your device's Music folder",
             ),
             onTap: _scanning ? null : _rescanLibrary,
+          ),
+          ListTile(
+            title: const Text('BPM analysis'),
+            subtitle: Text(_bpmProgressLabel(bpmProgress, isAnalyzing)),
+            trailing: isAnalyzing || _retrying
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : (bpmProgress != null && bpmProgress.$2 > 0)
+                    ? TextButton(
+                        onPressed: _retryUnanalyzed,
+                        child: const Text('Re-analyze all'),
+                      )
+                    : null,
           ),
           ListTile(
             title: const Text('Manage hidden songs'),

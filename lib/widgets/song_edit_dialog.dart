@@ -5,6 +5,14 @@ import '../core/constants.dart';
 import '../data/database/database.dart';
 import '../data/providers.dart';
 
+/// Multiplies the BPM field's current value by [factor] in place, rounded
+/// to a whole number. A no-op if the field is empty/unparseable.
+void _scaleBpm(TextEditingController controller, double factor) {
+  final current = double.tryParse(controller.text.trim());
+  if (current == null) return;
+  controller.text = (current * factor).round().toString();
+}
+
 /// Full song metadata editor: title, artist, and BPM (manual override, with
 /// a re-detect action). Used from the Library and Playlist three-dot menus.
 Future<void> showSongEditDialog(
@@ -42,14 +50,35 @@ Future<void> showSongEditDialog(
                     decoration: const InputDecoration(labelText: 'Artist'),
                   ),
                   const SizedBox(height: 12),
-                  TextField(
-                    controller: bpmController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(
-                      labelText: 'BPM (manual)',
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: bpmController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'BPM (manual)',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      // Detection sometimes locks onto half/double-time (see
+                      // BpmDetectionService's doc comment) - these fix that
+                      // in one tap instead of retyping the value.
+                      IconButton(
+                        tooltip: 'Halve (fix double-time detection)',
+                        onPressed: () => _scaleBpm(bpmController, 0.5),
+                        icon: const Text('\u00f72'),
+                      ),
+                      IconButton(
+                        tooltip: 'Double (fix half-time detection)',
+                        onPressed: () => _scaleBpm(bpmController, 2),
+                        icon: const Text('\u00d72'),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   if (song.bpmDetected != null)

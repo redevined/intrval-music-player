@@ -116,6 +116,15 @@ class SongRepository {
   Future<List<Song>> songsMissingBpm() =>
       (_db.select(_db.songs)..where((s) => s.bpmDetected.isNull())).get();
 
+  /// (total songs, songs still missing a BPM) - drives the analysis-status
+  /// entry in Settings. A single reactive query so both numbers stay in
+  /// sync with each other as songs are imported/analyzed.
+  Stream<(int total, int missing)> watchBpmProgress() {
+    return _db.select(_db.songs).watch().map(
+          (rows) => (rows.length, rows.where((r) => r.bpmDetected == null).length),
+        );
+  }
+
   Future<void> setDetectedBpm(String songId, double bpm) {
     return (_db.update(_db.songs)..where((s) => s.id.equals(songId)))
         .write(SongsCompanion(bpmDetected: Value(bpm)));

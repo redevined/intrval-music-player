@@ -60,6 +60,22 @@ class MusicLibraryScanner {
   /// in-memory only: a fresh app start gets to try again.
   final _unanalyzable = <String>{};
 
+  bool _isAnalyzing = false;
+  final _analyzingController = StreamController<bool>.broadcast();
+
+  /// Whether a BPM pass is currently running - drives the "Analyzing..."
+  /// status shown in Settings.
+  bool get isAnalyzing => _isAnalyzing;
+
+  /// Emits [isAnalyzing]'s current value immediately, then every time it
+  /// changes.
+  Stream<bool> get analyzingStream async* {
+    yield _isAnalyzing;
+    yield* _analyzingController.stream;
+  }
+
+  void dispose() => _analyzingController.close();
+
   /// Completes once newly found files have been imported. If a scan is
   /// already running, returns its Future instead of starting a redundant
   /// second pass (while [SongRepository.importSong] is safe to call
@@ -109,21 +125,37 @@ class MusicLibraryScanner {
   Future<void> _detectMissingBpm() =>
       _bpmPass ??= _runBpmPass().whenComplete(() => _bpmPass = null);
 
+  /// Re-attempts analysis for songs that gave up earlier this session (see
+  /// [_unanalyzable]) - the manual "Re-analyze all" action in Settings.
+  /// Songs that already have a BPM are untouched; this only affects the
+  /// backlog of ones that previously failed.
+  Future<void> retryUnanalyzed() {
+    _unanalyzable.clear();
+    return _detectMissingBpm();
+  }
+
   Future<void> _runBpmPass() async {
-    final pending = await _songRepository.songsMissingBpm();
-    for (final song in pending) {
-      if (_unanalyzable.contains(song.id)) continue;
-      try {
-        final result = await _bpmService.detectBpm(song.uri);
-        if (result != null) {
-          await _songRepository.setDetectedBpm(song.id, result.bpm);
-        } else {
+    _isAnalyzing = true;
+    _analyzingController.add(true);
+    try {
+      final pending = await _songRepository.songsMissingBpm();
+      for (final song in pending) {
+        if (_unanalyzable.contains(song.id)) continue;
+        try {
+          final result = await _bpmService.detectBpm(song.uri);
+          if (result != null) {
+            await _songRepository.setDetectedBpm(song.id, result.bpm);
+          } else {
+            _unanalyzable.add(song.id);
+          }
+        } catch (_) {
+          // A single unreadable file must not abort the whole backlog.
           _unanalyzable.add(song.id);
         }
-      } catch (_) {
-        // A single unreadable file must not abort the whole backlog.
-        _unanalyzable.add(song.id);
       }
+    } finally {
+      _isAnalyzing = false;
+      _analyzingController.add(false);
     }
   }
 }
