@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,35 +9,59 @@ import '../../data/database/database.dart';
 import '../../data/providers.dart';
 import 'practice_session_controller.dart';
 
+enum QueueRepeatMode { off, all, one }
+
 /// The currently-playing ad-hoc queue (Library/Playlist playback), shared
 /// across the whole app so a persistent mini-player can show/control it
 /// regardless of which tab is active.
 class NowPlayingState {
   NowPlayingState({
     required this.songs,
+    required this.order,
     required this.index,
     required this.tempoPercent,
     this.queueTitle,
+    this.shuffleEnabled = false,
+    this.repeatMode = QueueRepeatMode.off,
   });
 
   final List<Song> songs;
+
+  /// Playback order: a permutation of `songs`' indices. Sequential
+  /// (`[0, 1, 2, ...]`) with shuffle off; randomized with it on. [index]
+  /// points into this list, not directly into [songs].
+  final List<int> order;
   final int index;
   final int tempoPercent;
+  final bool shuffleEnabled;
+  final QueueRepeatMode repeatMode;
 
   /// Name of the playlist/source this queue was started from, e.g. shown as
   /// the player's app bar title. Null for a plain library queue.
   final String? queueTitle;
 
-  Song get currentSong => songs[index];
-  bool get hasNext => index < songs.length - 1;
+  Song get currentSong => songs[order[index]];
+
+  /// True whenever advancing makes sense - either there's a later track, or
+  /// repeat-all means "next" wraps back around to the first one.
+  bool get hasNext => repeatMode == QueueRepeatMode.all || index < order.length - 1;
   bool get hasPrevious => index > 0;
 
-  NowPlayingState copyWith({int? index, int? tempoPercent}) {
+  NowPlayingState copyWith({
+    List<int>? order,
+    int? index,
+    int? tempoPercent,
+    bool? shuffleEnabled,
+    QueueRepeatMode? repeatMode,
+  }) {
     return NowPlayingState(
       songs: songs,
+      order: order ?? this.order,
       index: index ?? this.index,
       tempoPercent: tempoPercent ?? this.tempoPercent,
       queueTitle: queueTitle,
+      shuffleEnabled: shuffleEnabled ?? this.shuffleEnabled,
+      repeatMode: repeatMode ?? this.repeatMode,
     );
   }
 }
@@ -65,6 +90,7 @@ class NowPlayingController extends StateNotifier<NowPlayingState?> {
     await _ref.read(practiceSessionProvider.notifier).stop();
     state = NowPlayingState(
       songs: songs,
+      order: List.generate(songs.length, (i) => i),
       index: initialIndex,
       tempoPercent: AppDefaults.tempoPercent,
       queueTitle: queueTitle,
@@ -95,15 +121,25 @@ class NowPlayingController extends StateNotifier<NowPlayingState?> {
     unawaited(handler.play());
   }
 
-  void _onTrackComplete() {
-    if (state == null) return;
-    next();
+  /// Auto-advance when a track finishes on its own (as opposed to the user
+  /// tapping "next") - repeat-one replays the same track instead of
+  /// advancing, which [next] deliberately does not do (a user-pressed skip
+  /// should always move forward, even mid repeat-one).
+  Future<void> _onTrackComplete() async {
+    final s = state;
+    if (s == null) return;
+    if (s.repeatMode == QueueRepeatMode.one) {
+      await _loadCurrent();
+      return;
+    }
+    await next();
   }
 
   Future<void> next() async {
     final s = state;
     if (s == null || !s.hasNext) return;
-    state = s.copyWith(index: s.index + 1);
+    final nextIndex = s.index + 1 >= s.order.length ? 0 : s.index + 1;
+    state = s.copyWith(index: nextIndex);
     await _loadCurrent();
   }
 
@@ -119,6 +155,43 @@ class NowPlayingController extends StateNotifier<NowPlayingState?> {
     }
     state = s.copyWith(index: s.index - 1);
     await _loadCurrent();
+  }
+
+  /// Toggles shuffle, re-randomizing (or restoring the sequential) play
+  /// order for every track except the one currently playing, which stays
+  /// exactly where it is so toggling shuffle never interrupts playback.
+  void toggleShuffle() {
+    final s = state;
+    if (s == null) return;
+    final currentSongIndex = s.order[s.index];
+    if (s.shuffleEnabled) {
+      final sequential = List.generate(s.songs.length, (i) => i);
+      state = s.copyWith(
+        order: sequential,
+        index: currentSongIndex,
+        shuffleEnabled: false,
+      );
+      return;
+    }
+    final rest = [
+      for (var i = 0; i < s.songs.length; i++)
+        if (i != currentSongIndex) i,
+    ]..shuffle(Random());
+    final anchor = s.index.clamp(0, rest.length);
+    final shuffled = [...rest]..insert(anchor, currentSongIndex);
+    state = s.copyWith(order: shuffled, shuffleEnabled: true);
+  }
+
+  void cycleRepeatMode() {
+    final s = state;
+    if (s == null) return;
+    state = s.copyWith(
+      repeatMode: switch (s.repeatMode) {
+        QueueRepeatMode.off => QueueRepeatMode.all,
+        QueueRepeatMode.all => QueueRepeatMode.one,
+        QueueRepeatMode.one => QueueRepeatMode.off,
+      },
+    );
   }
 
   Future<void> setTempo(int percent) async {

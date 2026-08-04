@@ -127,6 +127,59 @@ class _StandardPlayerScreenState extends ConsumerState<StandardPlayerScreen> {
           ),
         ],
       ),
+      footer: nowPlaying.songs.length > 1
+          ? _ShuffleRepeatRow(
+              shuffleEnabled: nowPlaying.shuffleEnabled,
+              onToggleShuffle: controller.toggleShuffle,
+              repeatMode: nowPlaying.repeatMode,
+              onCycleRepeat: controller.cycleRepeatMode,
+            )
+          : null,
+    );
+  }
+}
+
+class _ShuffleRepeatRow extends StatelessWidget {
+  const _ShuffleRepeatRow({
+    required this.shuffleEnabled,
+    required this.onToggleShuffle,
+    required this.repeatMode,
+    required this.onCycleRepeat,
+  });
+
+  final bool shuffleEnabled;
+  final VoidCallback onToggleShuffle;
+  final QueueRepeatMode repeatMode;
+  final VoidCallback onCycleRepeat;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    Color iconColor(bool active) => active ? colors.primary : colors.onSurfaceVariant;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        IconButton(
+          tooltip: shuffleEnabled ? 'Shuffle on' : 'Shuffle off',
+          icon: Icon(Icons.shuffle_rounded, color: iconColor(shuffleEnabled)),
+          onPressed: onToggleShuffle,
+        ),
+        const SizedBox(width: 24),
+        IconButton(
+          tooltip: switch (repeatMode) {
+            QueueRepeatMode.off => 'Repeat off',
+            QueueRepeatMode.all => 'Repeat all',
+            QueueRepeatMode.one => 'Repeat one',
+          },
+          icon: Icon(
+            repeatMode == QueueRepeatMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
+            color: iconColor(repeatMode != QueueRepeatMode.off),
+          ),
+          onPressed: onCycleRepeat,
+        ),
+      ],
     );
   }
 }
