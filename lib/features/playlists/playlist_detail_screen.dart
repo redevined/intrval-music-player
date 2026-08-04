@@ -5,6 +5,7 @@ import '../../data/database/database.dart';
 import '../../data/providers.dart';
 import '../../widgets/song_edit_dialog.dart';
 import '../../widgets/song_tile.dart';
+import '../../widgets/sort_app_bar_actions.dart';
 import '../library/library_screen.dart';
 import '../player/standard_player_screen.dart';
 
@@ -19,7 +20,7 @@ final _playlistSongsProvider =
 /// while active (there'd be nothing sensible for a drag to do).
 enum PlaylistViewSort { manual, title, artist, bpm, duration }
 
-enum _SongAction { edit, remove }
+enum _SongAction { edit, favorite, remove }
 
 class PlaylistDetailScreen extends ConsumerStatefulWidget {
   const PlaylistDetailScreen({super.key, required this.playlist});
@@ -33,9 +34,14 @@ class PlaylistDetailScreen extends ConsumerStatefulWidget {
 class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
   String _query = '';
   PlaylistViewSort _sort = PlaylistViewSort.manual;
+  bool _ascending = true;
+  bool _favoriteOnly = false;
 
   List<Song> _visible(List<Song> songs) {
     var result = songs;
+    if (_favoriteOnly) {
+      result = result.where((s) => s.isFavorite).toList();
+    }
     final query = _query.trim().toLowerCase();
     if (query.isNotEmpty) {
       result = result
@@ -63,6 +69,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
       case PlaylistViewSort.duration:
         result.sort((a, b) => (a.durationMs ?? 0).compareTo(b.durationMs ?? 0));
     }
+    if (!_ascending) result = result.reversed.toList();
     return result;
   }
 
@@ -74,11 +81,22 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
       appBar: AppBar(
         title: Text(widget.playlist.name),
         actions: [
-          PopupMenuButton<PlaylistViewSort>(
-            icon: const Icon(Icons.sort),
-            initialValue: _sort,
-            onSelected: (v) => setState(() => _sort = v),
-            itemBuilder: (context) => const [
+          IconButton(
+            tooltip: _favoriteOnly ? 'Show all songs' : 'Show favorites only',
+            icon: Icon(_favoriteOnly ? Icons.favorite : Icons.favorite_border),
+            onPressed: () => setState(() => _favoriteOnly = !_favoriteOnly),
+          ),
+          SortAppBarActions<PlaylistViewSort>(
+            // Ascending/descending doesn't map onto the drag-reordered
+            // manual order, so disable the toggle for it rather than have
+            // it silently do nothing.
+            ascending: _ascending,
+            onToggleAscending: _sort == PlaylistViewSort.manual
+                ? null
+                : () => setState(() => _ascending = !_ascending),
+            sortValue: _sort,
+            onSortSelected: (v) => setState(() => _sort = v),
+            items: const [
               PopupMenuItem(
                 value: PlaylistViewSort.manual,
                 child: Text('Manual (drag to reorder)'),
@@ -112,7 +130,9 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                     child: Text(
                       allSongs.isEmpty
                           ? 'No songs yet. Tap + to add some.'
-                          : 'No songs match your search.',
+                          : _favoriteOnly
+                              ? 'No favorite songs in this playlist.'
+                              : 'No songs match your search.',
                     ),
                   );
                 }
@@ -200,15 +220,24 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
           switch (action) {
             case _SongAction.edit:
               await showSongEditDialog(context, ref, song);
+            case _SongAction.favorite:
+              await ref
+                  .read(songRepositoryProvider)
+                  .setFavorite(song.id, !song.isFavorite);
             case _SongAction.remove:
               await ref
                   .read(playlistRepositoryProvider)
                   .removeSong(widget.playlist.id, song.id);
           }
         },
-        itemBuilder: (context) => const [
-          PopupMenuItem(value: _SongAction.edit, child: Text('Edit')),
-          PopupMenuItem(value: _SongAction.remove, child: Text('Remove from playlist')),
+        itemBuilder: (context) => [
+          const PopupMenuItem(value: _SongAction.edit, child: Text('Edit')),
+          PopupMenuItem(
+            value: _SongAction.favorite,
+            child: Text(song.isFavorite ? 'Unfavorite' : 'Favorite'),
+          ),
+          const PopupMenuItem(
+              value: _SongAction.remove, child: Text('Remove from playlist')),
         ],
       ),
       onTap: () => Navigator.of(context, rootNavigator: true).push(

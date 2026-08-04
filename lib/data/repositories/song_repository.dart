@@ -17,9 +17,13 @@ class SongRepository {
     SongSortField sortField = SongSortField.title,
     bool ascending = true,
     bool onlyHidden = false,
+    bool onlyFavorite = false,
   }) {
     final select = _db.select(_db.songs);
     select.where((s) => s.isHidden.equals(onlyHidden));
+    if (onlyFavorite) {
+      select.where((s) => s.isFavorite.equals(true));
+    }
     if (query != null && query.trim().isNotEmpty) {
       final like = '%${query.trim()}%';
       select.where((s) =>
@@ -145,6 +149,11 @@ class SongRepository {
   Future<void> setHidden(String songId, bool hidden) {
     return (_db.update(_db.songs)..where((s) => s.id.equals(songId)))
         .write(SongsCompanion(isHidden: Value(hidden)));
+  }
+
+  Future<void> setFavorite(String songId, bool favorite) {
+    return (_db.update(_db.songs)..where((s) => s.id.equals(songId)))
+        .write(SongsCompanion(isFavorite: Value(favorite)));
   }
 
   /// All currently-imported song URIs, used by the library auto-scanner to

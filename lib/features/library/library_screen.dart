@@ -13,15 +13,18 @@ import '../player/standard_player_screen.dart';
 final librarySearchProvider = StateProvider<String>((ref) => '');
 final librarySortProvider = StateProvider<SongSortField>((ref) => SongSortField.title);
 final librarySortAscendingProvider = StateProvider<bool>((ref) => true);
+final libraryFavoriteOnlyProvider = StateProvider<bool>((ref) => false);
 
 final librarySongsProvider = StreamProvider.autoDispose<List<Song>>((ref) {
   final query = ref.watch(librarySearchProvider);
   final sortField = ref.watch(librarySortProvider);
   final ascending = ref.watch(librarySortAscendingProvider);
+  final favoriteOnly = ref.watch(libraryFavoriteOnlyProvider);
   return ref.watch(songRepositoryProvider).watchAll(
         query: query,
         sortField: sortField,
         ascending: ascending,
+        onlyFavorite: favoriteOnly,
       );
 });
 
@@ -30,7 +33,7 @@ final bookmarkedFoldersProvider =
   return ref.watch(folderRepositoryProvider).watchAll();
 });
 
-enum _SongAction { edit, hide }
+enum _SongAction { edit, hide, favorite }
 
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
@@ -65,6 +68,18 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       appBar: AppBar(
         title: const TabHeading('Library'),
         actions: [
+          IconButton(
+            tooltip: ref.watch(libraryFavoriteOnlyProvider)
+                ? 'Show all songs'
+                : 'Show favorites only',
+            icon: Icon(
+              ref.watch(libraryFavoriteOnlyProvider)
+                  ? Icons.favorite
+                  : Icons.favorite_border,
+            ),
+            onPressed: () => ref.read(libraryFavoriteOnlyProvider.notifier).state =
+                !ref.read(libraryFavoriteOnlyProvider),
+          ),
           SortAppBarActions<SongSortField>(
             ascending: ref.watch(librarySortAscendingProvider),
             onToggleAscending: () => ref.read(librarySortAscendingProvider.notifier).state =
@@ -96,7 +111,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                       child: Text(
                         _scanning
                             ? 'Scanning your Music folder...'
-                            : 'No songs found in your device\'s Music folder.',
+                            : ref.watch(libraryFavoriteOnlyProvider)
+                                ? 'No favorite songs yet.'
+                                : 'No songs found in your device\'s Music folder.',
                       ),
                     )
                   : ListView.builder(
@@ -126,11 +143,19 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               await showSongEditDialog(context, ref, song);
             case _SongAction.hide:
               await ref.read(songRepositoryProvider).setHidden(song.id, true);
+            case _SongAction.favorite:
+              await ref
+                  .read(songRepositoryProvider)
+                  .setFavorite(song.id, !song.isFavorite);
           }
         },
-        itemBuilder: (context) => const [
-          PopupMenuItem(value: _SongAction.edit, child: Text('Edit')),
-          PopupMenuItem(value: _SongAction.hide, child: Text('Hide')),
+        itemBuilder: (context) => [
+          const PopupMenuItem(value: _SongAction.edit, child: Text('Edit')),
+          PopupMenuItem(
+            value: _SongAction.favorite,
+            child: Text(song.isFavorite ? 'Unfavorite' : 'Favorite'),
+          ),
+          const PopupMenuItem(value: _SongAction.hide, child: Text('Hide')),
         ],
       ),
       onTap: () => Navigator.of(context, rootNavigator: true).push(

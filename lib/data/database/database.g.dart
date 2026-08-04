@@ -453,6 +453,21 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _isFavoriteMeta = const VerificationMeta(
+    'isFavorite',
+  );
+  @override
+  late final GeneratedColumn<bool> isFavorite = GeneratedColumn<bool>(
+    'is_favorite',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_favorite" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -467,6 +482,7 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
     dateAdded,
     sourceFolderId,
     isHidden,
+    isFavorite,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -564,6 +580,12 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
         isHidden.isAcceptableOrUnknown(data['is_hidden']!, _isHiddenMeta),
       );
     }
+    if (data.containsKey('is_favorite')) {
+      context.handle(
+        _isFavoriteMeta,
+        isFavorite.isAcceptableOrUnknown(data['is_favorite']!, _isFavoriteMeta),
+      );
+    }
     return context;
   }
 
@@ -621,6 +643,10 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_hidden'],
       )!,
+      isFavorite: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_favorite'],
+      )!,
     );
   }
 
@@ -659,6 +685,11 @@ class Song extends DataClass implements Insertable<Song> {
   /// exist for playlists/sets that already reference them). Toggled from
   /// the Library's per-song menu; a "show hidden" filter reveals them again.
   final bool isHidden;
+
+  /// Toggled from the Library/Playlist three-dot menu and the player's
+  /// heart button. Drives the favorite-only filter in Library/Playlist
+  /// views.
+  final bool isFavorite;
   const Song({
     required this.id,
     required this.uri,
@@ -672,6 +703,7 @@ class Song extends DataClass implements Insertable<Song> {
     required this.dateAdded,
     this.sourceFolderId,
     required this.isHidden,
+    required this.isFavorite,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -702,6 +734,7 @@ class Song extends DataClass implements Insertable<Song> {
       map['source_folder_id'] = Variable<String>(sourceFolderId);
     }
     map['is_hidden'] = Variable<bool>(isHidden);
+    map['is_favorite'] = Variable<bool>(isFavorite);
     return map;
   }
 
@@ -733,6 +766,7 @@ class Song extends DataClass implements Insertable<Song> {
           ? const Value.absent()
           : Value(sourceFolderId),
       isHidden: Value(isHidden),
+      isFavorite: Value(isFavorite),
     );
   }
 
@@ -754,6 +788,7 @@ class Song extends DataClass implements Insertable<Song> {
       dateAdded: serializer.fromJson<DateTime>(json['dateAdded']),
       sourceFolderId: serializer.fromJson<String?>(json['sourceFolderId']),
       isHidden: serializer.fromJson<bool>(json['isHidden']),
+      isFavorite: serializer.fromJson<bool>(json['isFavorite']),
     );
   }
   @override
@@ -772,6 +807,7 @@ class Song extends DataClass implements Insertable<Song> {
       'dateAdded': serializer.toJson<DateTime>(dateAdded),
       'sourceFolderId': serializer.toJson<String?>(sourceFolderId),
       'isHidden': serializer.toJson<bool>(isHidden),
+      'isFavorite': serializer.toJson<bool>(isFavorite),
     };
   }
 
@@ -788,6 +824,7 @@ class Song extends DataClass implements Insertable<Song> {
     DateTime? dateAdded,
     Value<String?> sourceFolderId = const Value.absent(),
     bool? isHidden,
+    bool? isFavorite,
   }) => Song(
     id: id ?? this.id,
     uri: uri ?? this.uri,
@@ -803,6 +840,7 @@ class Song extends DataClass implements Insertable<Song> {
         ? sourceFolderId.value
         : this.sourceFolderId,
     isHidden: isHidden ?? this.isHidden,
+    isFavorite: isFavorite ?? this.isFavorite,
   );
   Song copyWithCompanion(SongsCompanion data) {
     return Song(
@@ -826,6 +864,9 @@ class Song extends DataClass implements Insertable<Song> {
           ? data.sourceFolderId.value
           : this.sourceFolderId,
       isHidden: data.isHidden.present ? data.isHidden.value : this.isHidden,
+      isFavorite: data.isFavorite.present
+          ? data.isFavorite.value
+          : this.isFavorite,
     );
   }
 
@@ -843,7 +884,8 @@ class Song extends DataClass implements Insertable<Song> {
           ..write('bpmManual: $bpmManual, ')
           ..write('dateAdded: $dateAdded, ')
           ..write('sourceFolderId: $sourceFolderId, ')
-          ..write('isHidden: $isHidden')
+          ..write('isHidden: $isHidden, ')
+          ..write('isFavorite: $isFavorite')
           ..write(')'))
         .toString();
   }
@@ -862,6 +904,7 @@ class Song extends DataClass implements Insertable<Song> {
     dateAdded,
     sourceFolderId,
     isHidden,
+    isFavorite,
   );
   @override
   bool operator ==(Object other) =>
@@ -878,7 +921,8 @@ class Song extends DataClass implements Insertable<Song> {
           other.bpmManual == this.bpmManual &&
           other.dateAdded == this.dateAdded &&
           other.sourceFolderId == this.sourceFolderId &&
-          other.isHidden == this.isHidden);
+          other.isHidden == this.isHidden &&
+          other.isFavorite == this.isFavorite);
 }
 
 class SongsCompanion extends UpdateCompanion<Song> {
@@ -894,6 +938,7 @@ class SongsCompanion extends UpdateCompanion<Song> {
   final Value<DateTime> dateAdded;
   final Value<String?> sourceFolderId;
   final Value<bool> isHidden;
+  final Value<bool> isFavorite;
   final Value<int> rowid;
   const SongsCompanion({
     this.id = const Value.absent(),
@@ -908,6 +953,7 @@ class SongsCompanion extends UpdateCompanion<Song> {
     this.dateAdded = const Value.absent(),
     this.sourceFolderId = const Value.absent(),
     this.isHidden = const Value.absent(),
+    this.isFavorite = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SongsCompanion.insert({
@@ -923,6 +969,7 @@ class SongsCompanion extends UpdateCompanion<Song> {
     this.dateAdded = const Value.absent(),
     this.sourceFolderId = const Value.absent(),
     this.isHidden = const Value.absent(),
+    this.isFavorite = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        uri = Value(uri),
@@ -940,6 +987,7 @@ class SongsCompanion extends UpdateCompanion<Song> {
     Expression<DateTime>? dateAdded,
     Expression<String>? sourceFolderId,
     Expression<bool>? isHidden,
+    Expression<bool>? isFavorite,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -955,6 +1003,7 @@ class SongsCompanion extends UpdateCompanion<Song> {
       if (dateAdded != null) 'date_added': dateAdded,
       if (sourceFolderId != null) 'source_folder_id': sourceFolderId,
       if (isHidden != null) 'is_hidden': isHidden,
+      if (isFavorite != null) 'is_favorite': isFavorite,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -972,6 +1021,7 @@ class SongsCompanion extends UpdateCompanion<Song> {
     Value<DateTime>? dateAdded,
     Value<String?>? sourceFolderId,
     Value<bool>? isHidden,
+    Value<bool>? isFavorite,
     Value<int>? rowid,
   }) {
     return SongsCompanion(
@@ -987,6 +1037,7 @@ class SongsCompanion extends UpdateCompanion<Song> {
       dateAdded: dateAdded ?? this.dateAdded,
       sourceFolderId: sourceFolderId ?? this.sourceFolderId,
       isHidden: isHidden ?? this.isHidden,
+      isFavorite: isFavorite ?? this.isFavorite,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1030,6 +1081,9 @@ class SongsCompanion extends UpdateCompanion<Song> {
     if (isHidden.present) {
       map['is_hidden'] = Variable<bool>(isHidden.value);
     }
+    if (isFavorite.present) {
+      map['is_favorite'] = Variable<bool>(isFavorite.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1051,6 +1105,7 @@ class SongsCompanion extends UpdateCompanion<Song> {
           ..write('dateAdded: $dateAdded, ')
           ..write('sourceFolderId: $sourceFolderId, ')
           ..write('isHidden: $isHidden, ')
+          ..write('isFavorite: $isFavorite, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3665,6 +3720,7 @@ typedef $$SongsTableCreateCompanionBuilder =
       Value<DateTime> dateAdded,
       Value<String?> sourceFolderId,
       Value<bool> isHidden,
+      Value<bool> isFavorite,
       Value<int> rowid,
     });
 typedef $$SongsTableUpdateCompanionBuilder =
@@ -3681,6 +3737,7 @@ typedef $$SongsTableUpdateCompanionBuilder =
       Value<DateTime> dateAdded,
       Value<String?> sourceFolderId,
       Value<bool> isHidden,
+      Value<bool> isFavorite,
       Value<int> rowid,
     });
 
@@ -3822,6 +3879,11 @@ class $$SongsTableFilterComposer extends Composer<_$AppDatabase, $SongsTable> {
 
   ColumnFilters<bool> get isHidden => $composableBuilder(
     column: $table.isHidden,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isFavorite => $composableBuilder(
+    column: $table.isFavorite,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3988,6 +4050,11 @@ class $$SongsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isFavorite => $composableBuilder(
+    column: $table.isFavorite,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$BookmarkedFoldersTableOrderingComposer get sourceFolderId {
     final $$BookmarkedFoldersTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -4059,6 +4126,11 @@ class $$SongsTableAnnotationComposer
 
   GeneratedColumn<bool> get isHidden =>
       $composableBuilder(column: $table.isHidden, builder: (column) => column);
+
+  GeneratedColumn<bool> get isFavorite => $composableBuilder(
+    column: $table.isFavorite,
+    builder: (column) => column,
+  );
 
   $$BookmarkedFoldersTableAnnotationComposer get sourceFolderId {
     final $$BookmarkedFoldersTableAnnotationComposer composer =
@@ -4205,6 +4277,7 @@ class $$SongsTableTableManager
                 Value<DateTime> dateAdded = const Value.absent(),
                 Value<String?> sourceFolderId = const Value.absent(),
                 Value<bool> isHidden = const Value.absent(),
+                Value<bool> isFavorite = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SongsCompanion(
                 id: id,
@@ -4219,6 +4292,7 @@ class $$SongsTableTableManager
                 dateAdded: dateAdded,
                 sourceFolderId: sourceFolderId,
                 isHidden: isHidden,
+                isFavorite: isFavorite,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4235,6 +4309,7 @@ class $$SongsTableTableManager
                 Value<DateTime> dateAdded = const Value.absent(),
                 Value<String?> sourceFolderId = const Value.absent(),
                 Value<bool> isHidden = const Value.absent(),
+                Value<bool> isFavorite = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SongsCompanion.insert(
                 id: id,
@@ -4249,6 +4324,7 @@ class $$SongsTableTableManager
                 dateAdded: dateAdded,
                 sourceFolderId: sourceFolderId,
                 isHidden: isHidden,
+                isFavorite: isFavorite,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

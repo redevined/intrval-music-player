@@ -13,7 +13,10 @@ class SortAppBarActions<T> extends StatelessWidget {
   });
 
   final bool ascending;
-  final VoidCallback onToggleAscending;
+
+  /// Null disables the toggle (e.g. when the active sort has no sensible
+  /// direction, like a manually drag-reordered list).
+  final VoidCallback? onToggleAscending;
   final T sortValue;
   final ValueChanged<T> onSortSelected;
   final List<PopupMenuItem<T>> items;

@@ -35,6 +35,11 @@ class Songs extends Table {
   /// the Library's per-song menu; a "show hidden" filter reveals them again.
   BoolColumn get isHidden => boolean().withDefault(const Constant(false))();
 
+  /// Toggled from the Library/Playlist three-dot menu and the player's
+  /// heart button. Drives the favorite-only filter in Library/Playlist
+  /// views.
+  BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {id};
 }

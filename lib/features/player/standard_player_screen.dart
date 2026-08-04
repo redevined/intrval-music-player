@@ -68,6 +68,15 @@ class _StandardPlayerScreenState extends ConsumerState<StandardPlayerScreen> {
 
     return PlayerShell(
       appBarTitle: nowPlaying.queueTitle ?? 'Now Playing',
+      appBarActions: [
+        IconButton(
+          tooltip: song.isFavorite ? 'Unfavorite' : 'Favorite',
+          icon: Icon(song.isFavorite ? Icons.favorite : Icons.favorite_border),
+          onPressed: () => ref
+              .read(songRepositoryProvider)
+              .setFavorite(song.id, !song.isFavorite),
+        ),
+      ],
       artwork: const PlayerArtwork(),
       contextHeader: nowPlaying.songs.length > 1
           ? _QueuePositionLabel(

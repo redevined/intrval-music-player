@@ -27,7 +27,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -47,6 +47,9 @@ class AppDatabase extends _$AppDatabase {
             await customStatement(
               'CREATE UNIQUE INDEX IF NOT EXISTS idx_songs_uri_unique ON songs (uri)',
             );
+          }
+          if (from < 4) {
+            await m.addColumn(songs, songs.isFavorite);
           }
         },
       );
