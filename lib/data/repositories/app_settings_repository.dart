@@ -46,6 +46,7 @@ class AppSettingsRepository {
   static const _kBreak = 'default_break_seconds';
   static const _kFade = 'fade_out_seconds';
   static const _kBreakCueMode = 'break_cue_mode';
+  static const _kBreakCueVolume = 'break_cue_volume_percent';
   static const _kMusicRootFolder = 'music_root_folder';
   static const _kThemeSeedOption = 'theme_seed_option';
 
@@ -85,6 +86,15 @@ class AppSettingsRepository {
 
   Future<void> saveBreakCueMode(String mode) =>
       _prefs.setString(_kBreakCueMode, mode);
+
+  /// Volume for whichever break cue is currently selected (ambient track or
+  /// beep), as a percentage - a single global setting for the same reason
+  /// as [breakCueMode].
+  int get breakCueVolumePercent =>
+      _prefs.getInt(_kBreakCueVolume) ?? AppDefaults.breakCueVolumePercent;
+
+  Future<void> saveBreakCueVolumePercent(int percent) =>
+      _prefs.setInt(_kBreakCueVolume, percent);
 
   /// Also a single global behavior, for the same reason as [breakCueMode].
   int get fadeOutSeconds => _prefs.getInt(_kFade) ?? AppDefaults.fadeOutSeconds;
@@ -133,6 +143,16 @@ class BreakCueModeController extends StateNotifier<String> {
   Future<void> update(String mode) async {
     state = mode;
     await _repo.saveBreakCueMode(mode);
+  }
+}
+
+class BreakCueVolumeController extends StateNotifier<int> {
+  BreakCueVolumeController(this._repo) : super(_repo.breakCueVolumePercent);
+  final AppSettingsRepository _repo;
+
+  Future<void> update(int percent) async {
+    state = percent;
+    await _repo.saveBreakCueVolumePercent(percent);
   }
 }
 

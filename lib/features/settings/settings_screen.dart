@@ -264,6 +264,51 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  Future<void> _editBreakCueVolume(
+    BuildContext context,
+    WidgetRef ref,
+    int current,
+  ) async {
+    var volume = current;
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Break cue volume'),
+          content: SizedBox(
+            width: kDialogContentWidth,
+            child: SingleChildScrollView(
+              child: LabeledSlider(
+                padding: EdgeInsets.zero,
+                label: 'Volume',
+                valueLabel: '$volume%',
+                value: volume.toDouble(),
+                min: 0,
+                max: 100,
+                divisions: 20,
+                onChanged: (v) => setState(() => volume = v.round()),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                await ref.read(breakCueVolumeProvider.notifier).update(volume);
+                if (context.mounted) Navigator.of(context).pop();
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _confirmClearData(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -334,6 +379,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final defaults = ref.watch(setDefaultsProvider);
     final rootFolder = ref.watch(musicRootFolderProvider);
     final breakCueMode = ref.watch(breakCueModeProvider);
+    final breakCueVolume = ref.watch(breakCueVolumeProvider);
     final fadeOutSeconds = ref.watch(fadeOutSecondsProvider);
     final hiddenCount = ref.watch(_hiddenSongCountProvider).valueOrNull;
     final version = ref.watch(packageInfoProvider).valueOrNull?.version;
@@ -363,6 +409,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             subtitle: Text(_breakCueModeLabel(breakCueMode)),
             onTap: () => _pickBreakCueMode(context, ref, breakCueMode),
           ),
+          if (breakCueMode != BreakCueMode.silence)
+            ListTile(
+              title: const Text('Break cue volume'),
+              subtitle: Text('$breakCueVolume%'),
+              onTap: () => _editBreakCueVolume(context, ref, breakCueVolume),
+            ),
           const Divider(),
           const _SectionHeader('Library'),
           ListTile(

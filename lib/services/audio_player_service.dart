@@ -66,9 +66,10 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
   /// channel - silent whenever that system setting is off, and inaudibly
   /// quiet even when it's on. A bundled asset played through just_audio
   /// goes out at normal media volume instead, so it's reliably audible.
-  Future<void> playBeep() async {
+  Future<void> playBeep({double volume = 1.0}) async {
     try {
       await _cuePlayer.setAsset('assets/sounds/beeps.mp3');
+      await _cuePlayer.setVolume(volume);
       await _cuePlayer.play();
     } catch (_) {
       // A missing/undecodable cue asset shouldn't take the session down.
@@ -76,15 +77,19 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
   }
 
   /// Starts the bundled break audio track looping at zero volume, then fades
-  /// it in over [fadeDuration]. Pair with [fadeOutAndStopBreakTrack] (or
-  /// [stopBreakTrack] for an immediate cut, e.g. on skip) to end it.
-  Future<void> playBreakTrack({Duration fadeDuration = const Duration(seconds: 2)}) async {
+  /// it in to [targetVolume] over [fadeDuration]. Pair with
+  /// [fadeOutAndStopBreakTrack] (or [stopBreakTrack] for an immediate cut,
+  /// e.g. on skip) to end it.
+  Future<void> playBreakTrack({
+    Duration fadeDuration = const Duration(seconds: 2),
+    double targetVolume = 1.0,
+  }) async {
     try {
       await _breakPlayer.setAsset('assets/sounds/break_audio_track.mp3');
       await _breakPlayer.setLoopMode(LoopMode.one);
       await _breakPlayer.setVolume(0);
       unawaited(_breakPlayer.play());
-      await _fade(_breakPlayer, from: 0, to: 1, duration: fadeDuration);
+      await _fade(_breakPlayer, from: 0, to: targetVolume, duration: fadeDuration);
     } catch (_) {
       // A missing/undecodable break track just means a silent break.
     }

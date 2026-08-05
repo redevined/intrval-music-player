@@ -325,6 +325,7 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
     // Snapshotted once per break from the global setting, so an in-flight
     // break isn't disrupted by the user changing the setting mid-break.
     final mode = _ref.read(breakCueModeProvider);
+    final cueVolume = _ref.read(breakCueVolumeProvider) / 100.0;
 
     state = s.copyWith(
       phase: SessionPhase.breaking,
@@ -343,7 +344,7 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
     final trackFade = Duration(seconds: trackFadeSeconds);
 
     if (mode == BreakCueMode.ambientSong) {
-      unawaited(handler.playBreakTrack(fadeDuration: trackFade));
+      unawaited(handler.playBreakTrack(fadeDuration: trackFade, targetVolume: cueVolume));
     }
 
     // The beep is a fixed lead time before the break ends; if the break
@@ -352,7 +353,7 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
         min(AppDefaults.beepLeadSeconds, resolved.breakSeconds);
     if (mode == BreakCueMode.beepBeforeEnd &&
         beepAtRemaining >= resolved.breakSeconds) {
-      unawaited(handler.playBeep());
+      unawaited(handler.playBeep(volume: cueVolume));
     }
 
     _breakTicker?.cancel();
@@ -374,7 +375,7 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
       if (mode == BreakCueMode.beepBeforeEnd &&
           remaining == beepAtRemaining &&
           beepAtRemaining < resolved.breakSeconds) {
-        unawaited(handler.playBeep());
+        unawaited(handler.playBeep(volume: cueVolume));
       }
 
       if (mode == BreakCueMode.ambientSong && remaining == trackFadeSeconds) {

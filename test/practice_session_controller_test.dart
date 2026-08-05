@@ -51,9 +51,13 @@ class FakeAudioHandler implements AudioPlayerHandler {
   Future<void> setTempoPercent(double percent) async => tempoPercent = percent;
 
   int beepCount = 0;
+  double? lastBeepVolume;
 
   @override
-  Future<void> playBeep() async => beepCount++;
+  Future<void> playBeep({double volume = 1.0}) async {
+    beepCount++;
+    lastBeepVolume = volume;
+  }
 
   @override
   Future<void> fadeOutAndStop(Duration duration) async => stop();
@@ -61,10 +65,15 @@ class FakeAudioHandler implements AudioPlayerHandler {
   bool breakTrackPlaying = false;
   int breakTrackFadeOutCount = 0;
   int breakTrackStopCount = 0;
+  double? lastBreakTrackTargetVolume;
 
   @override
-  Future<void> playBreakTrack({Duration fadeDuration = const Duration(seconds: 2)}) async {
+  Future<void> playBreakTrack({
+    Duration fadeDuration = const Duration(seconds: 2),
+    double targetVolume = 1.0,
+  }) async {
     breakTrackPlaying = true;
+    lastBreakTrackTargetVolume = targetVolume;
   }
 
   @override
@@ -233,6 +242,24 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 3100));
     expect(session()!.breakSecondsRemaining, 5);
     expect(handler.beepCount, 1);
+    // Default break cue volume (AppDefaults.breakCueVolumePercent) is 80%.
+    expect(handler.lastBeepVolume, 0.8);
+  });
+
+  test('break cue volume setting is applied to the beep and can be changed from its 80% default',
+      () async {
+    await container.read(breakCueModeProvider.notifier).update(BreakCueMode.beepBeforeEnd);
+    await container.read(breakCueVolumeProvider.notifier).update(50);
+    final set = await harness.createSetWithEntries(
+      ['Waltz', 'Tango'],
+      breakSeconds: 3,
+    );
+    await controller().start(set);
+
+    handler.onTrackComplete!();
+    await pumpEventQueue();
+    expect(handler.beepCount, 1);
+    expect(handler.lastBeepVolume, 0.5);
   });
 
   test('the beep fires immediately if the break itself is shorter than the fixed lead time',
@@ -263,6 +290,8 @@ void main() {
     await pumpEventQueue();
     expect(session()!.phase, SessionPhase.breaking);
     expect(handler.breakTrackPlaying, isTrue);
+    // Default break cue volume (AppDefaults.breakCueVolumePercent) is 80%.
+    expect(handler.lastBreakTrackTargetVolume, 0.8);
 
     // trackFadeSeconds = min(2, 8 ~/ 2) = 2, so fade-out starts at
     // breakSecondsRemaining == 2, i.e. after 6 ticks.

@@ -65,6 +65,15 @@ final breakCueModeProvider =
       return BreakCueModeController(ref.watch(appSettingsRepositoryProvider));
     });
 
+/// Volume for whichever break cue is currently selected (ambient track or
+/// beep) - same reasoning as [breakCueModeProvider].
+final breakCueVolumeProvider =
+    StateNotifierProvider<BreakCueVolumeController, int>((ref) {
+      return BreakCueVolumeController(
+        ref.watch(appSettingsRepositoryProvider),
+      );
+    });
+
 /// Same reasoning as [breakCueModeProvider]: a single global behavior rather
 /// than something worth deciding per practice set.
 final fadeOutSecondsProvider =

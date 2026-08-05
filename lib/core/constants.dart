@@ -14,6 +14,11 @@ class AppDefaults {
   static const int breakTrackFadeSeconds = 2;
   static const int tempoPercent = 100;
 
+  /// Default volume for the break cue (ambient track or beep), as a
+  /// percentage - both were previously played at full volume, which came
+  /// through noticeably louder than the songs themselves.
+  static const int breakCueVolumePercent = 80;
+
   /// Default folder auto-scanned for music, used until the user picks a
   /// different one in Settings.
   static const String musicRootFolder = '/storage/emulated/0/Music';
