@@ -17,16 +17,3 @@ Future<void> ensureNotificationPermission() async {
     // No platform channel (unit tests) or plugin unavailable - ignore.
   }
 }
-
-/// Whether the notification permission is currently granted - shown as a
-/// status row in Settings. Once denied, Android stops showing the runtime
-/// prompt entirely (`request()` silently no-ops), so that's the only way
-/// left to recover: the user has to flip it on manually in system
-/// Settings. Always true on iOS/unit tests.
-Future<bool> isNotificationPermissionGranted() async {
-  try {
-    return await Permission.notification.isGranted;
-  } catch (_) {
-    return true;
-  }
-}

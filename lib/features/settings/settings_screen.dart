@@ -2,14 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:permission_handler/permission_handler.dart';
-
 import '../../core/constants.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
 import '../../data/repositories/app_settings_repository.dart';
-import '../../services/battery_optimization.dart';
-import '../../services/notification_permission.dart';
 import '../../widgets/labeled_slider.dart';
 import '../../widgets/tab_heading.dart';
 import 'hidden_songs_screen.dart';
@@ -35,46 +31,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _pickingFolder = false;
 
   bool _retrying = false;
-
-  bool? _notificationGranted;
-  bool? _batteryExempt;
-
-  @override
-  void initState() {
-    super.initState();
-    _refreshPermissionStatuses();
-  }
-
-  Future<void> _refreshPermissionStatuses() async {
-    final notificationGranted = await isNotificationPermissionGranted();
-    final batteryExempt = await isIgnoringBatteryOptimizations();
-    if (!mounted) return;
-    setState(() {
-      _notificationGranted = notificationGranted;
-      _batteryExempt = batteryExempt;
-    });
-  }
-
-  /// Once denied, Android won't show the runtime prompt again - `request()`
-  /// silently no-ops - so if it's still not granted after trying, the only
-  /// way left to fix it is the system settings page.
-  Future<void> _fixNotificationPermission() async {
-    await ensureNotificationPermission();
-    if (!await isNotificationPermissionGranted()) {
-      await openAppSettings();
-    }
-    await _refreshPermissionStatuses();
-  }
-
-  /// Same idea as [_fixNotificationPermission] - falls back to the system
-  /// settings page if the runtime prompt doesn't stick.
-  Future<void> _fixBatteryOptimization() async {
-    await requestIgnoreBatteryOptimizations();
-    if (!await isIgnoringBatteryOptimizations()) {
-      await openAppSettings();
-    }
-    await _refreshPermissionStatuses();
-  }
 
   Future<void> _retryUnanalyzed() async {
     setState(() => _retrying = true);
@@ -388,36 +344,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       appBar: AppBar(title: const TabHeading('Settings')),
       body: ListView(
         children: [
-          const _SectionHeader('Playback reliability'),
-          ListTile(
-            title: const Text('Notifications'),
-            subtitle: Text(
-              _notificationGranted == null
-                  ? 'Checking...'
-                  : _notificationGranted!
-                      ? 'Allowed - the playback notification will show'
-                      : 'Not allowed - the playback notification stays hidden',
-            ),
-            trailing: _notificationGranted == false
-                ? const Icon(Icons.warning_amber_rounded, color: Colors.orange)
-                : null,
-            onTap: _notificationGranted == false ? _fixNotificationPermission : null,
-          ),
-          ListTile(
-            title: const Text('Background playback'),
-            subtitle: Text(
-              _batteryExempt == null
-                  ? 'Checking...'
-                  : _batteryExempt!
-                      ? 'Unrestricted - playback survives being backgrounded'
-                      : 'Restricted - the OS may kill playback in the background',
-            ),
-            trailing: _batteryExempt == false
-                ? const Icon(Icons.warning_amber_rounded, color: Colors.orange)
-                : null,
-            onTap: _batteryExempt == false ? _fixBatteryOptimization : null,
-          ),
-          const Divider(),
           const _SectionHeader('Sets'),
           ListTile(
             title: const Text('New set defaults'),
