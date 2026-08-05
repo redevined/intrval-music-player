@@ -1,5 +1,6 @@
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme.dart';
@@ -77,7 +78,13 @@ class _HomeShellState extends State<HomeShell> {
         if (tabNavigator != null && tabNavigator.canPop()) {
           tabNavigator.pop();
         } else {
-          Navigator.of(context).maybePop();
+          // Nothing left to pop: this PopScope wraps HomeShell itself
+          // (MaterialApp.home), so calling Navigator.of(context).maybePop()
+          // here would just re-invoke this exact same PopScope callback
+          // again (didPop always false, since canPop is false above),
+          // recursing forever via the microtask queue until it saturates
+          // the main thread and trips an ANR. Exit the app directly instead.
+          SystemNavigator.pop();
         }
       },
       child: Scaffold(

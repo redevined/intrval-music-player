@@ -196,6 +196,7 @@ class PlaylistListScreen extends ConsumerWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'playlist-list-add-fab',
         onPressed: () => _createPlaylist(context, ref),
         child: const Icon(Icons.add),
       ),

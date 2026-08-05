@@ -187,6 +187,7 @@ class SetListScreen extends ConsumerWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'set-list-add-fab',
         onPressed: () => _createSet(context, ref),
         child: const Icon(Icons.add),
       ),
