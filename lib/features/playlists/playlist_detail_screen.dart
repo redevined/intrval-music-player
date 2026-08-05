@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
+import '../../widgets/add_to_playlist_sheet.dart';
 import '../../widgets/song_edit_dialog.dart';
 import '../../widgets/song_tile.dart';
 import '../../widgets/sort_app_bar_actions.dart';
@@ -20,7 +21,7 @@ final _playlistSongsProvider =
 /// while active (there'd be nothing sensible for a drag to do).
 enum PlaylistViewSort { manual, title, artist, bpm, duration }
 
-enum _SongAction { edit, favorite, remove }
+enum _SongAction { edit, favorite, addToPlaylist, remove }
 
 class PlaylistDetailScreen extends ConsumerStatefulWidget {
   const PlaylistDetailScreen({super.key, required this.playlist});
@@ -224,6 +225,8 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
               await ref
                   .read(songRepositoryProvider)
                   .setFavorite(song.id, !song.isFavorite);
+            case _SongAction.addToPlaylist:
+              await showAddToPlaylistSheet(context, ref, song);
             case _SongAction.remove:
               await ref
                   .read(playlistRepositoryProvider)
@@ -235,6 +238,10 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
           PopupMenuItem(
             value: _SongAction.favorite,
             child: Text(song.isFavorite ? 'Unfavorite' : 'Favorite'),
+          ),
+          const PopupMenuItem(
+            value: _SongAction.addToPlaylist,
+            child: Text('Add to playlist'),
           ),
           const PopupMenuItem(
               value: _SongAction.remove, child: Text('Remove from playlist')),

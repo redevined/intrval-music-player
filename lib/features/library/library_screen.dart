@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
 import '../../data/repositories/song_repository.dart';
+import '../../widgets/add_to_playlist_sheet.dart';
 import '../../widgets/song_edit_dialog.dart';
 import '../../widgets/song_tile.dart';
 import '../../widgets/sort_app_bar_actions.dart';
@@ -33,7 +34,7 @@ final bookmarkedFoldersProvider =
   return ref.watch(folderRepositoryProvider).watchAll();
 });
 
-enum _SongAction { edit, hide, favorite }
+enum _SongAction { edit, hide, favorite, addToPlaylist }
 
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
@@ -147,6 +148,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               await ref
                   .read(songRepositoryProvider)
                   .setFavorite(song.id, !song.isFavorite);
+            case _SongAction.addToPlaylist:
+              await showAddToPlaylistSheet(context, ref, song);
           }
         },
         itemBuilder: (context) => [
@@ -154,6 +157,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           PopupMenuItem(
             value: _SongAction.favorite,
             child: Text(song.isFavorite ? 'Unfavorite' : 'Favorite'),
+          ),
+          const PopupMenuItem(
+            value: _SongAction.addToPlaylist,
+            child: Text('Add to playlist'),
           ),
           const PopupMenuItem(value: _SongAction.hide, child: Text('Hide')),
         ],

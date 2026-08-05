@@ -225,19 +225,19 @@ class SetBuilderScreen extends ConsumerWidget {
                     divisions: 24,
                     onChanged: (v) => setState(() => breakSeconds = v.round()),
                   ),
-                  TextButton(
-                    onPressed: () => setState(() {
-                      tempoPercent = null;
-                      playSeconds = null;
-                      breakSeconds = null;
-                    }),
-                    child: const Text('Reset overrides to inherit'),
-                  ),
                 ],
               ),
             ),
           ),
           actions: [
+            TextButton(
+              onPressed: () => setState(() {
+                tempoPercent = null;
+                playSeconds = null;
+                breakSeconds = null;
+              }),
+              child: const Text('Reset'),
+            ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('Cancel'),
@@ -321,6 +321,14 @@ class SetBuilderScreen extends ConsumerWidget {
             ),
           ),
           actions: [
+            TextButton(
+              onPressed: () => setState(() {
+                tempo = AppDefaults.tempoPercent;
+                play = AppDefaults.playDurationSeconds;
+                brk = AppDefaults.breakSeconds;
+              }),
+              child: const Text('Reset'),
+            ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('Cancel'),

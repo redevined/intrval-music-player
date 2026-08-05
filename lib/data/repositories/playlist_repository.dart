@@ -42,6 +42,16 @@ class PlaylistRepository {
         );
   }
 
+  /// IDs of every playlist [songId] currently belongs to - used to show
+  /// membership status in the "add to playlist" picker.
+  Stream<Set<String>> watchPlaylistIdsForSong(String songId) {
+    final query = _db.select(_db.playlistSongs)
+      ..where((ps) => ps.songId.equals(songId));
+    return query
+        .watch()
+        .map((rows) => rows.map((r) => r.playlistId).toSet());
+  }
+
   Future<void> addSong(String playlistId, String songId) async {
     final currentMax = await (_db.selectOnly(_db.playlistSongs)
           ..addColumns([_db.playlistSongs.sortIndex.max()])
