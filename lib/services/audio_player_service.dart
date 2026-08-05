@@ -163,14 +163,24 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       ProcessingState.completed: AudioProcessingState.completed,
     };
     playbackState.add(playbackState.value.copyWith(
+      // MediaControl.stop is deliberately excluded: on Android 13+,
+      // audio_service's AudioService.createCustomAction() routes
+      // MediaAction.stop through a PlaybackStateCompat.CustomAction that
+      // requires resolving its icon via Resources.getIdentifier() at
+      // runtime. That lookup was observed failing on a real device (Nothing
+      // Phone 2, Android 16) with "You must specify an icon resource id to
+      // build a CustomAction" thrown on every single playback-state
+      // broadcast, which aborted notification construction entirely and
+      // meant the system media notification never appeared at all - even
+      // though play/pause/skip (native Android 13+ slots, not custom
+      // actions) worked fine. See https://github.com/ryanheise/audio_service/pull/973.
       controls: [
         MediaControl.skipToPrevious,
         if (_player.playing) MediaControl.pause else MediaControl.play,
-        MediaControl.stop,
         MediaControl.skipToNext,
       ],
       systemActions: const {MediaAction.seek},
-      androidCompactActionIndices: const [0, 1, 3],
+      androidCompactActionIndices: const [0, 1, 2],
       processingState:
           processingStateMap[_player.processingState] ?? AudioProcessingState.idle,
       playing: _player.playing,
