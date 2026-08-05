@@ -32,6 +32,17 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    // Renames the built APK from Flutter's generic app-<buildType>.apk to
+    // intrval-v<versionName>.apk (e.g. intrval-v0.3.0.apk), so release
+    // assets are self-describing without a manual rename step.
+    applicationVariants.all {
+        val version = versionName
+        outputs.all {
+            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl)
+                .outputFileName = "intrval-v$version.apk"
+        }
+    }
 }
 
 kotlin {
