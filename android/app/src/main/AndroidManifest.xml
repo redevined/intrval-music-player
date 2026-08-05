@@ -13,6 +13,15 @@
          permission requests); without it the OS silently drops the
          notification even though playback itself keeps working. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Lets us prompt the user to exempt intrval from Doze/App Standby
+         battery optimizations (see services/battery_optimization.dart).
+         audio_service's foreground service drops to a lower-priority,
+         freely-killable state whenever playback is paused - OEM battery
+         managers (observed on a Nothing Phone 2) are especially aggressive
+         about reclaiming that, killing the whole process and losing all
+         in-app state (including the mini player) once the app is
+         backgrounded. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
 
     <application
         android:label="intrval"

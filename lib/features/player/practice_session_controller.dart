@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
+import '../../services/battery_optimization.dart';
 import '../../services/notification_permission.dart';
 import 'now_playing_controller.dart';
 
@@ -151,6 +152,7 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
   Future<void> start(PracticeSet practiceSet) async {
     _generation++;
     unawaited(ensureNotificationPermission());
+    unawaited(requestIgnoreBatteryOptimizations());
     _playTicker?.cancel();
     _breakTicker?.cancel();
 
