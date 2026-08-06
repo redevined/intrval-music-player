@@ -323,9 +323,10 @@ class SetBuilderScreen extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: () => setState(() {
-                tempo = AppDefaults.tempoPercent;
-                play = AppDefaults.playDurationSeconds;
-                brk = AppDefaults.breakSeconds;
+                final appWideDefaults = ref.read(setDefaultsProvider);
+                tempo = appWideDefaults.tempoPercent;
+                play = appWideDefaults.playDurationSeconds;
+                brk = appWideDefaults.breakSeconds;
               }),
               child: const Text('Reset'),
             ),
