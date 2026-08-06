@@ -74,6 +74,14 @@ final breakCueVolumeProvider =
       );
     });
 
+/// Overall volume boost applied to all playback - a single global setting,
+/// since the device not being loud enough is a property of the room/
+/// speakers rather than of whatever happens to be playing.
+final volumeBoostDbProvider =
+    StateNotifierProvider<VolumeBoostController, double>((ref) {
+      return VolumeBoostController(ref.watch(appSettingsRepositoryProvider));
+    });
+
 /// Same reasoning as [breakCueModeProvider]: a single global behavior rather
 /// than something worth deciding per practice set.
 final fadeOutSecondsProvider =

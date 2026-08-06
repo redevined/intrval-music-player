@@ -24,16 +24,30 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     });
   }
 
-  final AudioPlayer _player = AudioPlayer();
+  // One LoudnessEnhancer per player (see setVolumeBoostDb) - on Android
+  // this boosts perceived loudness beyond the device's normal 100% output
+  // using dynamic range compression, rather than simple digital gain, to
+  // avoid immediately hard-clipping. It's a no-op on other platforms.
+  final _loudnessEnhancer = AndroidLoudnessEnhancer();
+  final _cueLoudnessEnhancer = AndroidLoudnessEnhancer();
+  final _breakLoudnessEnhancer = AndroidLoudnessEnhancer();
+
+  late final AudioPlayer _player = AudioPlayer(
+    audioPipeline: AudioPipeline(androidAudioEffects: [_loudnessEnhancer]),
+  );
 
   // A separate player for short UI cues (currently just the break-countdown
   // beep) so it can play alongside whatever - if anything - the main player
   // is doing, without disturbing its loaded track/position/tempo.
-  final AudioPlayer _cuePlayer = AudioPlayer();
+  late final AudioPlayer _cuePlayer = AudioPlayer(
+    audioPipeline: AudioPipeline(androidAudioEffects: [_cueLoudnessEnhancer]),
+  );
 
   // A separate player for the break audio track, so it can loop/fade
   // independently of the main player and the short beep cue.
-  final AudioPlayer _breakPlayer = AudioPlayer();
+  late final AudioPlayer _breakPlayer = AudioPlayer(
+    audioPipeline: AudioPipeline(androidAudioEffects: [_breakLoudnessEnhancer]),
+  );
 
   /// Called when the current track finishes playing naturally.
   void Function()? onTrackComplete;
@@ -60,6 +74,24 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
 
   /// [percent] is 70-130, matching the app's tempo slider range.
   Future<void> setTempoPercent(double percent) => _player.setSpeed(percent / 100.0);
+
+  /// Applies an overall volume boost (in decibels, see [VolumeBoostLimits])
+  /// on top of the device's normal output, to every player - so it's heard
+  /// consistently across songs, the break track, and the beep cue. Left
+  /// disabled at 0dB so playback is bit-for-bit unchanged by default.
+  Future<void> setVolumeBoostDb(double db) async {
+    final enabled = db > 0;
+    await Future.wait([
+      _loudnessEnhancer.setTargetGain(db),
+      _cueLoudnessEnhancer.setTargetGain(db),
+      _breakLoudnessEnhancer.setTargetGain(db),
+    ]);
+    await Future.wait([
+      _loudnessEnhancer.setEnabled(enabled),
+      _cueLoudnessEnhancer.setEnabled(enabled),
+      _breakLoudnessEnhancer.setEnabled(enabled),
+    ]);
+  }
 
   /// Plays the break-countdown beep cue. `SystemSound.play` was tried here
   /// first, but it's routed through Android's UI "touch sound" effect

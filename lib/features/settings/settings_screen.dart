@@ -309,6 +309,70 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  Future<void> _editVolumeBoost(
+    BuildContext context,
+    WidgetRef ref,
+    double current,
+  ) async {
+    var db = current;
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Overall volume boost'),
+          content: SizedBox(
+            width: kDialogContentWidth,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Boosts loudness beyond the device\'s normal maximum '
+                    'volume. Quality degrades at higher settings, so keep '
+                    'this as low as covers your speakers.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  LabeledSlider(
+                    padding: const EdgeInsets.only(top: 12),
+                    label: 'Boost',
+                    valueLabel: db == 0 ? 'off' : '+${db.toStringAsFixed(1)} dB',
+                    value: db,
+                    min: VolumeBoostLimits.minDb,
+                    max: VolumeBoostLimits.maxDb,
+                    divisions:
+                        ((VolumeBoostLimits.maxDb - VolumeBoostLimits.minDb) /
+                                VolumeBoostLimits.stepDb)
+                            .round(),
+                    onChanged: (v) => setState(() => db = v),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => setState(() => db = AppDefaults.volumeBoostDb),
+              child: const Text('Reset'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                await ref.read(volumeBoostDbProvider.notifier).update(db);
+                if (context.mounted) Navigator.of(context).pop();
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _confirmClearData(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -380,6 +444,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final rootFolder = ref.watch(musicRootFolderProvider);
     final breakCueMode = ref.watch(breakCueModeProvider);
     final breakCueVolume = ref.watch(breakCueVolumeProvider);
+    final volumeBoostDb = ref.watch(volumeBoostDbProvider);
     final fadeOutSeconds = ref.watch(fadeOutSecondsProvider);
     final hiddenCount = ref.watch(_hiddenSongCountProvider).valueOrNull;
     final version = ref.watch(packageInfoProvider).valueOrNull?.version;
@@ -415,6 +480,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               subtitle: Text('$breakCueVolume%'),
               onTap: () => _editBreakCueVolume(context, ref, breakCueVolume),
             ),
+          ListTile(
+            title: const Text('Overall volume boost'),
+            subtitle: Text(
+              volumeBoostDb == 0
+                  ? 'Off'
+                  : '+${volumeBoostDb.toStringAsFixed(1)} dB',
+            ),
+            onTap: () => _editVolumeBoost(context, ref, volumeBoostDb),
+          ),
           const Divider(),
           const _SectionHeader('Library'),
           ListTile(

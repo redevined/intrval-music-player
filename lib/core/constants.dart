@@ -19,6 +19,10 @@ class AppDefaults {
   /// through noticeably louder than the songs themselves.
   static const int breakCueVolumePercent = 80;
 
+  /// Default overall volume boost, in decibels - off by default, so
+  /// playback is unchanged unless the user explicitly turns it up.
+  static const double volumeBoostDb = 0.0;
+
   /// Default folder auto-scanned for music, used until the user picks a
   /// different one in Settings.
   static const String musicRootFolder = '/storage/emulated/0/Music';
@@ -28,6 +32,17 @@ class TempoLimits {
   static const int minPercent = 70;
   static const int maxPercent = 130;
   static const int stepPercent = 1;
+}
+
+/// Overall volume boost applies gain beyond the device's normal 100%
+/// output via Android's LoudnessEnhancer, which uses dynamic range
+/// compression rather than simple digital gain to raise perceived
+/// loudness without immediately hard-clipping. Quality still degrades
+/// as the boost increases, so the ceiling here is kept modest.
+class VolumeBoostLimits {
+  static const double minDb = 0.0;
+  static const double maxDb = 12.0;
+  static const double stepDb = 0.5;
 }
 
 /// Fixed width for every `AlertDialog`'s content, so a dialog's size never

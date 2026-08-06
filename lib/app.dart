@@ -11,13 +11,33 @@ import 'features/sets/set_list_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'widgets/mini_player.dart';
 
-class IntrvalApp extends ConsumerWidget {
+class IntrvalApp extends ConsumerStatefulWidget {
   const IntrvalApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<IntrvalApp> createState() => _IntrvalAppState();
+}
+
+class _IntrvalAppState extends ConsumerState<IntrvalApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Applies the persisted volume boost on launch; live changes afterwards
+    // are picked up by the ref.listen below.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref
+          .read(audioHandlerProvider)
+          .setVolumeBoostDb(ref.read(volumeBoostDbProvider));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeSeedOption = ref.watch(themeSeedProvider);
     final corePalette = ref.watch(systemCorePaletteProvider).valueOrNull;
+    ref.listen<double>(volumeBoostDbProvider, (previous, next) {
+      ref.read(audioHandlerProvider).setVolumeBoostDb(next);
+    });
 
     return MaterialApp(
       title: 'intrval',
