@@ -52,10 +52,19 @@ class _SeekBarState extends State<SeekBar> {
         ? '-${_format(widget.duration - shown)}'
         : _format(widget.duration);
 
+    final startLabel = _format(shown);
     final labelStyle = theme.textTheme.labelMedium?.copyWith(
       color: theme.colorScheme.onSurfaceVariant,
       fontFeatures: const [FontFeature.tabularFigures()],
     );
+    final markerLabelStyle = theme.textTheme.labelSmall?.copyWith(
+      color: theme.colorScheme.error,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+
+    final stopAt = widget.stopAt;
+    final markerFraction =
+        stopAt == null ? null : (stopAt.inMilliseconds / maxMs).clamp(0.0, 1.0);
 
     return Column(
       children: [
@@ -66,9 +75,7 @@ class _SeekBarState extends State<SeekBar> {
             trackHeight: 6,
             thumbSize: const WidgetStatePropertyAll(Size(4, 22)),
             trackShape: _MarkedSliderTrackShape(
-              markerFraction: widget.stopAt == null
-                  ? null
-                  : (widget.stopAt!.inMilliseconds / maxMs).clamp(0.0, 1.0),
+              markerFraction: markerFraction,
               markerColor: theme.colorScheme.error,
             ),
           ),
@@ -86,11 +93,44 @@ class _SeekBarState extends State<SeekBar> {
                   },
           ),
         ),
+        // Reserved even when there's no marker, so the row below doesn't
+        // shift up/down as the marker appears/disappears between tracks.
+        SizedBox(
+          height: 14,
+          child: markerFraction == null
+              ? null
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final trackWidth = constraints.maxWidth;
+                    final markerText = _format(stopAt!);
+                    final markerWidth = _measure(markerText, markerLabelStyle);
+                    // Keep the marker label clear of the start/end labels
+                    // directly below it - if there isn't room for it
+                    // between the two, it's close enough to one of the
+                    // edges that the tick alone still reads fine on its own.
+                    const gap = 6.0;
+                    final minLeft = _measure(startLabel, labelStyle) + gap;
+                    final maxLeft =
+                        trackWidth - _measure(trailing, labelStyle) - gap - markerWidth;
+                    if (minLeft > maxLeft) return const SizedBox.shrink();
+                    final left =
+                        (trackWidth * markerFraction - markerWidth / 2).clamp(minLeft, maxLeft);
+                    return Stack(
+                      children: [
+                        Positioned(
+                          left: left,
+                          child: Text(markerText, style: markerLabelStyle),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+        ),
         const SizedBox(height: 4),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(_format(shown), style: labelStyle),
+            Text(startLabel, style: labelStyle),
             Text(trailing, style: labelStyle),
           ],
         ),
@@ -103,6 +143,14 @@ class _SeekBarState extends State<SeekBar> {
     final m = clamped.inMinutes;
     final s = clamped.inSeconds % 60;
     return '$m:${s.toString().padLeft(2, '0')}';
+  }
+
+  static double _measure(String text, TextStyle? style) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    return painter.width;
   }
 }
 
