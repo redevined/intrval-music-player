@@ -57,7 +57,7 @@ class _SeekBarState extends State<SeekBar> {
       color: theme.colorScheme.onSurfaceVariant,
       fontFeatures: const [FontFeature.tabularFigures()],
     );
-    final markerLabelStyle = theme.textTheme.labelSmall?.copyWith(
+    final markerLabelStyle = theme.textTheme.labelMedium?.copyWith(
       color: theme.colorScheme.error,
       fontFeatures: const [FontFeature.tabularFigures()],
     );
@@ -93,46 +93,52 @@ class _SeekBarState extends State<SeekBar> {
                   },
           ),
         ),
-        // Reserved even when there's no marker, so the row below doesn't
-        // shift up/down as the marker appears/disappears between tracks.
-        SizedBox(
-          height: 14,
-          child: markerFraction == null
-              ? null
-              : LayoutBuilder(
-                  builder: (context, constraints) {
-                    final trackWidth = constraints.maxWidth;
-                    final markerText = _format(stopAt!);
-                    final markerWidth = _measure(markerText, markerLabelStyle);
-                    // Keep the marker label clear of the start/end labels
-                    // directly below it - if there isn't room for it
-                    // between the two, it's close enough to one of the
-                    // edges that the tick alone still reads fine on its own.
-                    const gap = 6.0;
-                    final minLeft = _measure(startLabel, labelStyle) + gap;
-                    final maxLeft =
-                        trackWidth - _measure(trailing, labelStyle) - gap - markerWidth;
-                    if (minLeft > maxLeft) return const SizedBox.shrink();
-                    final left =
-                        (trackWidth * markerFraction - markerWidth / 2).clamp(minLeft, maxLeft);
-                    return Stack(
-                      children: [
-                        Positioned(
-                          left: left,
-                          child: Text(markerText, style: markerLabelStyle),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-        ),
         const SizedBox(height: 4),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(startLabel, style: labelStyle),
-            Text(trailing, style: labelStyle),
-          ],
+        // The marker's own time label (when there's a cutoff to show) is
+        // overlaid on this same row rather than reserving a row of its own
+        // above it - keeps the start/end readout at a fixed vertical
+        // position regardless of whether a marker is present.
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final row = Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(startLabel, style: labelStyle),
+                Text(trailing, style: labelStyle),
+              ],
+            );
+            if (markerFraction == null) return row;
+
+            final trackWidth = constraints.maxWidth;
+            final markerText = _format(stopAt!);
+            final markerWidth = _measure(markerText, markerLabelStyle);
+            // Keep the marker label clear of the start/end labels sharing
+            // the row with it - if there isn't room for it between the
+            // two, it's close enough to one of the edges that the tick
+            // alone still reads fine on its own.
+            const gap = 6.0;
+            final minLeft = _measure(startLabel, labelStyle) + gap;
+            final maxLeft =
+                trackWidth - _measure(trailing, labelStyle) - gap - markerWidth;
+            if (minLeft > maxLeft) return row;
+            final left =
+                (trackWidth * markerFraction - markerWidth / 2).clamp(minLeft, maxLeft);
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                row,
+                Positioned(
+                  left: left,
+                  top: 0,
+                  bottom: 0,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(markerText, style: markerLabelStyle),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ],
     );

@@ -442,6 +442,42 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
     await _ref.read(audioHandlerProvider).setTempoPercent(percent.toDouble());
   }
 
+  /// Toggles the current song's favorite flag. `PracticeSessionState.
+  /// currentSong` is a local snapshot (picked once when the entry started),
+  /// so - same as [NowPlayingController.toggleFavoriteCurrent] - a bare DB
+  /// write alone wouldn't make the player's heart icon/menu label flip.
+  Future<void> toggleFavoriteCurrentSong() async {
+    final s = state;
+    final song = s?.currentSong;
+    if (s == null || song == null) return;
+    final favorite = !song.isFavorite;
+    await _ref.read(songRepositoryProvider).setFavorite(song.id, favorite);
+    state = s.copyWith(currentSong: song.copyWith(isFavorite: favorite));
+  }
+
+  /// Patches the current song's local snapshot with freshly-edited
+  /// metadata (see [SongActionsMenu.onSongUpdated]) - same reasoning as
+  /// [toggleFavoriteCurrentSong].
+  void updateCurrentSongLocally(Song updated) {
+    final s = state;
+    if (s == null || s.currentSong == null) return;
+    state = s.copyWith(currentSong: updated);
+  }
+
+  /// Removes the current song from the entry's source playlist (see
+  /// [SetEntry.playlistId]) - a DB-only detach, same as
+  /// [NowPlayingController.removeCurrentFromPlaylist]: playback and the
+  /// running session are left untouched. A set entry pulls a fresh
+  /// candidate from its source each time it's played, so this only affects
+  /// future runs, not the song currently playing.
+  Future<void> removeCurrentSongFromPlaylist() async {
+    final s = state;
+    final song = s?.currentSong;
+    final playlistId = s?.currentEntry?.entry.playlistId;
+    if (song == null || playlistId == null) return;
+    await _ref.read(playlistRepositoryProvider).removeSong(playlistId, song.id);
+  }
+
   Future<void> restart() async {
     final s = state;
     if (s == null) return;

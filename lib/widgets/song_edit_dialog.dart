@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -15,11 +16,15 @@ void _scaleBpm(TextEditingController controller, double factor) {
 
 /// Full song metadata editor: title, artist, and BPM (manual override, with
 /// a re-detect action). Used from the Library and Playlist three-dot menus.
+///
+/// [onSaved], when given, is called with the freshly-updated song right
+/// after it's written to the database - see [SongActionsMenu.onSongUpdated].
 Future<void> showSongEditDialog(
   BuildContext context,
   WidgetRef ref,
-  Song song,
-) async {
+  Song song, {
+  ValueChanged<Song>? onSaved,
+}) async {
   final titleController = TextEditingController(text: song.title);
   final artistController = TextEditingController(text: song.artist ?? '');
   final bpmController = TextEditingController(
@@ -125,17 +130,24 @@ Future<void> showSongEditDialog(
                 final title = titleController.text.trim();
                 final artist = artistController.text.trim();
                 final bpm = double.tryParse(bpmController.text.trim());
+                final resolvedTitle = title.isEmpty ? song.title : title;
+                final resolvedArtist = artist.isEmpty ? null : artist;
                 await ref
                     .read(songRepositoryProvider)
                     .updateMetadata(
                       song.id,
-                      title: title.isEmpty ? song.title : title,
-                      artist: artist.isEmpty ? null : artist,
+                      title: resolvedTitle,
+                      artist: resolvedArtist,
                     );
                 await ref
                     .read(songRepositoryProvider)
                     .setManualBpm(song.id, bpm);
                 if (context.mounted) Navigator.of(context).pop();
+                onSaved?.call(song.copyWith(
+                  title: resolvedTitle,
+                  artist: Value(resolvedArtist),
+                  bpmManual: Value(bpm),
+                ));
               },
               child: const Text('Save'),
             ),

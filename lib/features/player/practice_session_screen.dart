@@ -120,10 +120,17 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
             if (context.mounted) Navigator.of(context).maybePop();
           },
         ),
-        // No hide/remove here - a session entry pulls a random/sequential
-        // song from a playlist or folder each run rather than owning a
-        // fixed list, so there's nothing sensible to remove it from.
-        if (session.currentSong != null) SongActionsMenu(song: session.currentSong!),
+        if (session.currentSong != null)
+          SongActionsMenu(
+            song: session.currentSong!,
+            // Only offered when the entry actually pulls from a playlist -
+            // a folder-backed entry has nothing sensible to remove it from.
+            onRemoveFromPlaylist: entry?.entry.playlistId == null
+                ? null
+                : controller.removeCurrentSongFromPlaylist,
+            onToggleFavorite: controller.toggleFavoriteCurrentSong,
+            onSongUpdated: controller.updateCurrentSongLocally,
+          ),
       ],
       artwork: StreamBuilder<Uint8List?>(
         stream: handler.coverArtStream,

@@ -90,6 +90,8 @@ class _StandardPlayerScreenState extends ConsumerState<StandardPlayerScreen> {
           onRemoveFromPlaylist: nowPlaying.sourcePlaylistId == null
               ? null
               : controller.removeCurrentFromPlaylist,
+          onToggleFavorite: controller.toggleFavoriteCurrent,
+          onSongUpdated: controller.updateCurrentSongLocally,
         ),
       ],
       artwork: StreamBuilder<Uint8List?>(

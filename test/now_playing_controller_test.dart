@@ -284,4 +284,47 @@ void main() {
     await controller().toggleFavoriteCurrent();
     expect(state()!.currentSong.isFavorite, isFalse);
   });
+
+  test(
+      'updateCurrentSongLocally patches the in-memory currentSong, so an '
+      'edit (title/artist/BPM) shows up immediately', () async {
+    final songs = await importSongs(2);
+    await controller().playQueue(songs, 0);
+
+    controller().updateCurrentSongLocally(
+      songs[0].copyWith(title: 'New title'),
+    );
+
+    expect(state()!.currentSong.title, 'New title');
+  });
+
+  test(
+      "removeCurrentFromPlaylist detaches the song from the DB playlist "
+      'without touching playback or the in-memory queue - unlike an earlier '
+      'version, it must not stop/reload the currently-playing track', () async {
+    final songs = await importSongs(2);
+    final playlistId = await container.read(playlistRepositoryProvider).create('Test');
+    for (final song in songs) {
+      await container.read(playlistRepositoryProvider).addSong(playlistId, song.id);
+    }
+    await controller().playQueue(songs, 0, sourcePlaylistId: playlistId);
+    final loadedBefore = handler.loadedUris.length;
+
+    await controller().removeCurrentFromPlaylist();
+
+    final remaining = await container
+        .read(playlistRepositoryProvider)
+        .watchSongs(playlistId)
+        .first;
+    expect(remaining.map((s) => s.id), isNot(contains(songs[0].id)));
+
+    expect(handler.playing, isTrue, reason: 'must not have been stopped');
+    expect(handler.loadedUris.length, loadedBefore, reason: 'must not have reloaded');
+    expect(
+      state()!.songs.map((s) => s.id),
+      contains(songs[0].id),
+      reason: 'the in-memory queue is left untouched, same as unchecking a '
+          'song from the "Add to playlist" sheet',
+    );
+  });
 }

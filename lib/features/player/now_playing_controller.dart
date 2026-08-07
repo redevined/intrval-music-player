@@ -225,35 +225,34 @@ class NowPlayingController extends StateNotifier<NowPlayingState?> {
   }
 
   /// Removes the current track from the playlist it was started from (see
-  /// [NowPlayingState.sourcePlaylistId]) and drops it from this queue too,
-  /// so it doesn't keep playing/reappear on next. Stops and closes the
-  /// player if it was the only song left; otherwise the song that follows
-  /// slides into its place, same as skipping to the next track.
+  /// [NowPlayingState.sourcePlaylistId]) - a DB-only detach, deliberately
+  /// leaving playback and the in-memory queue untouched, same as unchecking
+  /// a song from the "Add to playlist" sheet. An earlier version also
+  /// dropped it from this queue (reloading, or stopping if it was the only
+  /// song left), which meant the currently-playing song audibly cut out
+  /// the moment you removed it - jarring, and inconsistent with the other
+  /// way to do the same removal (the "Add to playlist" sheet), which never
+  /// touched playback at all.
   Future<void> removeCurrentFromPlaylist() async {
     final s = state;
     if (s == null) return;
     final playlistId = s.sourcePlaylistId;
     if (playlistId == null) return;
-    final songIndex = s.order[s.index];
-    final song = s.songs[songIndex];
+    final song = s.currentSong;
     await _ref.read(playlistRepositoryProvider).removeSong(playlistId, song.id);
+  }
 
-    if (s.songs.length <= 1) {
-      await stop();
-      return;
-    }
-
-    final newSongs = [...s.songs]..removeAt(songIndex);
-    final newOrder = [
-      for (final i in s.order)
-        if (i != songIndex) (i > songIndex ? i - 1 : i),
-    ];
-    state = s.copyWith(
-      songs: newSongs,
-      order: newOrder,
-      index: s.index % newOrder.length,
-    );
-    await _loadCurrent();
+  /// Patches the current track's local snapshot with freshly-edited
+  /// metadata (see [SongActionsMenu.onSongUpdated]) - same reasoning as
+  /// [toggleFavoriteCurrent]: `NowPlayingState.songs` won't pick up a bare
+  /// DB write on its own.
+  void updateCurrentSongLocally(Song updated) {
+    final s = state;
+    if (s == null) return;
+    final songIndex = s.order[s.index];
+    final updatedSongs = [...s.songs];
+    updatedSongs[songIndex] = updated;
+    state = s.copyWith(songs: updatedSongs);
   }
 
   void cycleRepeatMode() {
