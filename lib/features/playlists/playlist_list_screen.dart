@@ -144,6 +144,8 @@ class PlaylistListScreen extends ConsumerWidget {
                                                         songs: songs!,
                                                         queueTitle:
                                                             playlist.name,
+                                                        sourcePlaylistId:
+                                                            playlist.id,
                                                       ),
                                                 ),
                                               ),

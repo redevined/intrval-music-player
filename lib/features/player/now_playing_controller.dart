@@ -21,6 +21,7 @@ class NowPlayingState {
     required this.index,
     required this.tempoPercent,
     this.queueTitle,
+    this.sourcePlaylistId,
     this.shuffleEnabled = false,
     this.repeatMode = QueueRepeatMode.off,
   });
@@ -39,6 +40,12 @@ class NowPlayingState {
   /// Name of the playlist/source this queue was started from, e.g. shown as
   /// the player's app bar title. Null for a plain library queue.
   final String? queueTitle;
+
+  /// Id of the playlist this queue was started from, if any - lets the
+  /// player's song menu offer "Remove from playlist" (see
+  /// [NowPlayingController.removeCurrentFromPlaylist]). Null for library
+  /// playback or a bookmarked folder's contents.
+  final String? sourcePlaylistId;
 
   Song get currentSong => songs[order[index]];
 
@@ -62,6 +69,7 @@ class NowPlayingState {
       index: index ?? this.index,
       tempoPercent: tempoPercent ?? this.tempoPercent,
       queueTitle: queueTitle,
+      sourcePlaylistId: sourcePlaylistId,
       shuffleEnabled: shuffleEnabled ?? this.shuffleEnabled,
       repeatMode: repeatMode ?? this.repeatMode,
     );
@@ -89,7 +97,12 @@ class NowPlayingController extends StateNotifier<NowPlayingState?> {
     handler.onSkipPrevious = () => unawaited(previous());
   }
 
-  Future<void> playQueue(List<Song> songs, int initialIndex, {String? queueTitle}) async {
+  Future<void> playQueue(
+    List<Song> songs,
+    int initialIndex, {
+    String? queueTitle,
+    String? sourcePlaylistId,
+  }) async {
     if (songs.isEmpty) return;
     unawaited(ensureNotificationPermission());
     // Ad-hoc playback and a timed practice set can't share the one audio
@@ -101,6 +114,7 @@ class NowPlayingController extends StateNotifier<NowPlayingState?> {
       index: initialIndex,
       tempoPercent: AppDefaults.tempoPercent,
       queueTitle: queueTitle,
+      sourcePlaylistId: sourcePlaylistId,
     );
     _attachTrackCompleteHandler();
     await _loadCurrent();
@@ -208,6 +222,38 @@ class NowPlayingController extends StateNotifier<NowPlayingState?> {
     final updatedSongs = [...s.songs];
     updatedSongs[songIndex] = song.copyWith(isFavorite: favorite);
     state = s.copyWith(songs: updatedSongs);
+  }
+
+  /// Removes the current track from the playlist it was started from (see
+  /// [NowPlayingState.sourcePlaylistId]) and drops it from this queue too,
+  /// so it doesn't keep playing/reappear on next. Stops and closes the
+  /// player if it was the only song left; otherwise the song that follows
+  /// slides into its place, same as skipping to the next track.
+  Future<void> removeCurrentFromPlaylist() async {
+    final s = state;
+    if (s == null) return;
+    final playlistId = s.sourcePlaylistId;
+    if (playlistId == null) return;
+    final songIndex = s.order[s.index];
+    final song = s.songs[songIndex];
+    await _ref.read(playlistRepositoryProvider).removeSong(playlistId, song.id);
+
+    if (s.songs.length <= 1) {
+      await stop();
+      return;
+    }
+
+    final newSongs = [...s.songs]..removeAt(songIndex);
+    final newOrder = [
+      for (final i in s.order)
+        if (i != songIndex) (i > songIndex ? i - 1 : i),
+    ];
+    state = s.copyWith(
+      songs: newSongs,
+      order: newOrder,
+      index: s.index % newOrder.length,
+    );
+    await _loadCurrent();
   }
 
   void cycleRepeatMode() {

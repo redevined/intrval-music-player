@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
-import '../../widgets/add_to_playlist_sheet.dart';
-import '../../widgets/song_edit_dialog.dart';
+import '../../widgets/song_actions_menu.dart';
 import '../../widgets/song_tile.dart';
 import '../../widgets/sort_app_bar_actions.dart';
 import '../library/library_screen.dart';
@@ -20,8 +19,6 @@ final _playlistSongsProvider =
 /// list without touching the persisted order, and disables drag-reordering
 /// while active (there'd be nothing sensible for a drag to do).
 enum PlaylistViewSort { manual, title, artist, bpm, duration }
-
-enum _SongAction { edit, favorite, addToPlaylist, remove }
 
 class PlaylistDetailScreen extends ConsumerStatefulWidget {
   const PlaylistDetailScreen({super.key, required this.playlist});
@@ -179,6 +176,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                         builder: (_) => StandardPlayerScreen(
                           songs: songsAsync.valueOrNull!,
                           queueTitle: widget.playlist.name,
+                          sourcePlaylistId: widget.playlist.id,
                         ),
                       ),
                     ),
@@ -214,38 +212,11 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
               ),
             )
           : null,
-      trailing: PopupMenuButton<_SongAction>(
-        icon: const Icon(Icons.more_vert),
-        padding: EdgeInsets.zero,
-        onSelected: (action) async {
-          switch (action) {
-            case _SongAction.edit:
-              await showSongEditDialog(context, ref, song);
-            case _SongAction.favorite:
-              await ref
-                  .read(songRepositoryProvider)
-                  .setFavorite(song.id, !song.isFavorite);
-            case _SongAction.addToPlaylist:
-              await showAddToPlaylistSheet(context, ref, song);
-            case _SongAction.remove:
-              await ref
-                  .read(playlistRepositoryProvider)
-                  .removeSong(widget.playlist.id, song.id);
-          }
-        },
-        itemBuilder: (context) => [
-          const PopupMenuItem(value: _SongAction.edit, child: Text('Edit')),
-          PopupMenuItem(
-            value: _SongAction.favorite,
-            child: Text(song.isFavorite ? 'Unfavorite' : 'Favorite'),
-          ),
-          const PopupMenuItem(
-            value: _SongAction.addToPlaylist,
-            child: Text('Add to playlist'),
-          ),
-          const PopupMenuItem(
-              value: _SongAction.remove, child: Text('Remove from playlist')),
-        ],
+      trailing: SongActionsMenu(
+        song: song,
+        onRemoveFromPlaylist: () => ref
+            .read(playlistRepositoryProvider)
+            .removeSong(widget.playlist.id, song.id),
       ),
       onTap: () => Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(
@@ -253,6 +224,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
             songs: songs,
             initialIndex: i,
             queueTitle: widget.playlist.name,
+            sourcePlaylistId: widget.playlist.id,
           ),
         ),
       ),

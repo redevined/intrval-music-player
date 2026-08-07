@@ -4,8 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
 import '../../data/repositories/song_repository.dart';
-import '../../widgets/add_to_playlist_sheet.dart';
-import '../../widgets/song_edit_dialog.dart';
+import '../../widgets/song_actions_menu.dart';
 import '../../widgets/song_tile.dart';
 import '../../widgets/sort_app_bar_actions.dart';
 import '../../widgets/tab_heading.dart';
@@ -33,8 +32,6 @@ final bookmarkedFoldersProvider =
     StreamProvider.autoDispose<List<BookmarkedFolder>>((ref) {
   return ref.watch(folderRepositoryProvider).watchAll();
 });
-
-enum _SongAction { edit, hide, favorite, addToPlaylist }
 
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
@@ -135,36 +132,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final song = songs[i];
     return SongTile(
       song: song,
-      trailing: PopupMenuButton<_SongAction>(
-        icon: const Icon(Icons.more_vert),
-        padding: EdgeInsets.zero,
-        onSelected: (action) async {
-          switch (action) {
-            case _SongAction.edit:
-              await showSongEditDialog(context, ref, song);
-            case _SongAction.hide:
-              await ref.read(songRepositoryProvider).setHidden(song.id, true);
-            case _SongAction.favorite:
-              await ref
-                  .read(songRepositoryProvider)
-                  .setFavorite(song.id, !song.isFavorite);
-            case _SongAction.addToPlaylist:
-              await showAddToPlaylistSheet(context, ref, song);
-          }
-        },
-        itemBuilder: (context) => [
-          const PopupMenuItem(value: _SongAction.edit, child: Text('Edit')),
-          PopupMenuItem(
-            value: _SongAction.favorite,
-            child: Text(song.isFavorite ? 'Unfavorite' : 'Favorite'),
-          ),
-          const PopupMenuItem(
-            value: _SongAction.addToPlaylist,
-            child: Text('Add to playlist'),
-          ),
-          const PopupMenuItem(value: _SongAction.hide, child: Text('Hide')),
-        ],
-      ),
+      trailing: SongActionsMenu(song: song, showHide: true),
       onTap: () => Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(
           builder: (_) => StandardPlayerScreen(songs: songs, initialIndex: i),

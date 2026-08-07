@@ -7,6 +7,7 @@ import '../../data/database/database.dart';
 import '../../data/providers.dart';
 import '../../widgets/player_artwork.dart';
 import '../../widgets/seek_bar.dart';
+import '../../widgets/song_actions_menu.dart';
 import '../../widgets/tempo_slider.dart';
 import 'player_shell.dart';
 import 'practice_session_controller.dart';
@@ -119,6 +120,10 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
             if (context.mounted) Navigator.of(context).maybePop();
           },
         ),
+        // No hide/remove here - a session entry pulls a random/sequential
+        // song from a playlist or folder each run rather than owning a
+        // fixed list, so there's nothing sensible to remove it from.
+        if (session.currentSong != null) SongActionsMenu(song: session.currentSong!),
       ],
       artwork: StreamBuilder<Uint8List?>(
         stream: handler.coverArtStream,

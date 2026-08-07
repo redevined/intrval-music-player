@@ -7,6 +7,7 @@ import '../../data/database/database.dart';
 import '../../data/providers.dart';
 import '../../widgets/player_artwork.dart';
 import '../../widgets/seek_bar.dart';
+import '../../widgets/song_actions_menu.dart';
 import '../../widgets/tempo_slider.dart';
 import 'now_playing_controller.dart';
 import 'player_shell.dart';
@@ -25,6 +26,7 @@ class StandardPlayerScreen extends ConsumerStatefulWidget {
     this.songs,
     this.initialIndex = 0,
     this.queueTitle,
+    this.sourcePlaylistId,
   });
 
   final List<Song>? songs;
@@ -33,6 +35,11 @@ class StandardPlayerScreen extends ConsumerStatefulWidget {
   /// Name of the playlist this queue was started from, shown as the app bar
   /// title instead of the generic "Now Playing". Null for library playback.
   final String? queueTitle;
+
+  /// Id of the playlist this queue was started from, if any - lets the
+  /// player's song menu offer "Remove from playlist". Null for library
+  /// playback or a bookmarked folder's contents.
+  final String? sourcePlaylistId;
 
   @override
   ConsumerState<StandardPlayerScreen> createState() => _StandardPlayerScreenState();
@@ -45,9 +52,12 @@ class _StandardPlayerScreenState extends ConsumerState<StandardPlayerScreen> {
     final songs = widget.songs;
     if (songs != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref
-            .read(nowPlayingProvider.notifier)
-            .playQueue(songs, widget.initialIndex, queueTitle: widget.queueTitle);
+        ref.read(nowPlayingProvider.notifier).playQueue(
+              songs,
+              widget.initialIndex,
+              queueTitle: widget.queueTitle,
+              sourcePlaylistId: widget.sourcePlaylistId,
+            );
       });
     }
   }
@@ -74,6 +84,12 @@ class _StandardPlayerScreenState extends ConsumerState<StandardPlayerScreen> {
           tooltip: song.isFavorite ? 'Unfavorite' : 'Favorite',
           icon: Icon(song.isFavorite ? Icons.favorite : Icons.favorite_border),
           onPressed: controller.toggleFavoriteCurrent,
+        ),
+        SongActionsMenu(
+          song: song,
+          onRemoveFromPlaylist: nowPlaying.sourcePlaylistId == null
+              ? null
+              : controller.removeCurrentFromPlaylist,
         ),
       ],
       artwork: StreamBuilder<Uint8List?>(
