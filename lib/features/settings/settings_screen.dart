@@ -499,6 +499,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       appBar: AppBar(title: const TabHeading('Settings')),
       body: ListView(
         children: [
+          const _SectionHeader('Playback'),
+          ListTile(
+            title: const Text('Overall volume boost'),
+            subtitle: Text(
+              volumeBoostDb == 0
+                  ? 'Off'
+                  : '+${volumeBoostDb.toStringAsFixed(1)} dB',
+            ),
+            onTap: () => _editVolumeBoost(context, ref, volumeBoostDb),
+          ),
+          ListTile(
+            title: const Text('Tempo algorithm'),
+            subtitle: Text(_tempoAlgorithmLabel(tempoAlgorithm)),
+            onTap: () => _pickTempoAlgorithm(context, ref, tempoAlgorithm),
+          ),
+          const Divider(),
           const _SectionHeader('Sets'),
           ListTile(
             title: const Text('New set defaults'),
@@ -524,20 +540,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               subtitle: Text('$breakCueVolume%'),
               onTap: () => _editBreakCueVolume(context, ref, breakCueVolume),
             ),
-          ListTile(
-            title: const Text('Overall volume boost'),
-            subtitle: Text(
-              volumeBoostDb == 0
-                  ? 'Off'
-                  : '+${volumeBoostDb.toStringAsFixed(1)} dB',
-            ),
-            onTap: () => _editVolumeBoost(context, ref, volumeBoostDb),
-          ),
-          ListTile(
-            title: const Text('Tempo algorithm'),
-            subtitle: Text(_tempoAlgorithmLabel(tempoAlgorithm)),
-            onTap: () => _pickTempoAlgorithm(context, ref, tempoAlgorithm),
-          ),
           const Divider(),
           const _SectionHeader('Library'),
           ListTile(
