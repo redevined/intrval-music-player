@@ -1,4 +1,3 @@
-import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -71,10 +70,10 @@ class MiniPlayer extends ConsumerWidget {
         MaterialPageRoute(builder: (_) => const StandardPlayerScreen()),
       ),
       actions: [
-        StreamBuilder<PlaybackState>(
-          stream: handler.playbackState,
+        StreamBuilder<bool>(
+          stream: handler.playingStream,
           builder: (context, snapshot) {
-            final playing = snapshot.data?.playing ?? false;
+            final playing = snapshot.data ?? false;
             return _MiniIconButton(
               icon: playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
               tooltip: playing ? 'Pause' : 'Play',

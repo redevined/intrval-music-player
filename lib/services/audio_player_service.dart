@@ -1,107 +1,151 @@
 import 'dart:async';
 
-import 'package:audio_service/audio_service.dart';
-import 'package:just_audio/just_audio.dart';
+import 'package:mpv_audio_kit/mpv_audio_kit.dart' as mak;
 
-/// Wraps a `just_audio` player behind an `audio_service` [BaseAudioHandler]
-/// so playback survives screen-off and exposes standard lock-screen /
-/// notification media controls (play/pause/skip).
+/// Wraps three `mpv_audio_kit` players (main track, break-countdown beep,
+/// break audio track) and the OS media session (lock-screen / notification
+/// controls) for the main player, behind the same small surface the rest of
+/// the app used against just_audio + audio_service.
 ///
-/// Tempo is applied via [AudioPlayer.setSpeed]. On Android's default
-/// ExoPlayer backend this preserves pitch automatically (only `speed` is
-/// changed while `pitch` stays at its default of 1.0, so the built-in Sonic
-/// time-stretcher kicks in). iOS pitch-preservation behavior should be
-/// verified against a real device/simulator as part of the Phase 0 spike
-/// noted in the project plan - just_audio may need an explicit
-/// `AVAudioTimePitchAlgorithm` configuration there for perfect parity.
-class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
+/// Tempo is applied via the Rubber Band time-stretch DSP filter
+/// (`RubberbandSettings`) rather than mpv's own playback rate, so pitch is
+/// preserved identically across platforms - see the ADR on migrating off
+/// just_audio/Sonic.
+class AudioPlayerHandler {
   AudioPlayerHandler() {
-    _player.playbackEventStream.listen(_broadcastState);
-    _player.playerStateStream.listen((state) {
-      if (state.processingState == ProcessingState.completed) {
-        onTrackComplete?.call();
-      }
+    _player.stream.completed.listen((completed) {
+      if (completed) onTrackComplete?.call();
     });
+    _player.setMediaSession(
+      const mak.MediaSession(
+        actions: {
+          mak.MediaAction.play,
+          mak.MediaAction.pause,
+          mak.MediaAction.playPause,
+          mak.MediaAction.next,
+          mak.MediaAction.previous,
+          mak.MediaAction.seek,
+        },
+        // We manage our own ad-hoc/practice queues rather than loading a
+        // playlist into mpv itself, so next/previous have to be handled by
+        // us - see _handleMediaSessionCommand below.
+        autoApplyPlaylistNavigation: false,
+      ),
+    );
+    _player.stream.mediaSessionCommands.listen(_handleMediaSessionCommand);
   }
 
-  // One LoudnessEnhancer per player (see setVolumeBoostDb) - on Android
-  // this boosts perceived loudness beyond the device's normal 100% output
-  // using dynamic range compression, rather than simple digital gain, to
-  // avoid immediately hard-clipping. It's a no-op on other platforms.
-  final _loudnessEnhancer = AndroidLoudnessEnhancer();
-  final _cueLoudnessEnhancer = AndroidLoudnessEnhancer();
-  final _breakLoudnessEnhancer = AndroidLoudnessEnhancer();
-
-  late final AudioPlayer _player = AudioPlayer(
-    audioPipeline: AudioPipeline(androidAudioEffects: [_loudnessEnhancer]),
-  );
+  final mak.Player _player = mak.Player();
 
   // A separate player for short UI cues (currently just the break-countdown
   // beep) so it can play alongside whatever - if anything - the main player
   // is doing, without disturbing its loaded track/position/tempo.
-  late final AudioPlayer _cuePlayer = AudioPlayer(
-    audioPipeline: AudioPipeline(androidAudioEffects: [_cueLoudnessEnhancer]),
-  );
+  final mak.Player _cuePlayer = mak.Player();
 
   // A separate player for the break audio track, so it can loop/fade
   // independently of the main player and the short beep cue.
-  late final AudioPlayer _breakPlayer = AudioPlayer(
-    audioPipeline: AudioPipeline(androidAudioEffects: [_breakLoudnessEnhancer]),
-  );
+  final mak.Player _breakPlayer = mak.Player();
 
   /// Called when the current track finishes playing naturally.
   void Function()? onTrackComplete;
 
-  Stream<Duration> get positionStream => _player.positionStream;
-  Duration get position => _player.position;
-  Duration? get duration => _player.duration;
-  bool get isPlaying => _player.playing;
+  /// Called on a lock-screen/notification "skip to next/previous" press.
+  /// mpv has no playlist of its own loaded (each track is loaded
+  /// individually via [loadTrack]), so these commands only surface on
+  /// [mak.Player.stream.mediaSessionCommands] rather than doing anything on
+  /// their own - forward them to whichever controller currently owns the
+  /// queue.
+  void Function()? onSkipNext;
+  void Function()? onSkipPrevious;
+
+  void _handleMediaSessionCommand(mak.MediaSessionCommand command) {
+    switch (command) {
+      case mak.MediaSessionCommandNext():
+        onSkipNext?.call();
+      case mak.MediaSessionCommandPrevious():
+        onSkipPrevious?.call();
+      case _:
+        break;
+    }
+  }
+
+  Stream<Duration> get positionStream => _player.stream.position;
+  Duration get position => _player.state.position;
+  Duration? get duration =>
+      _player.state.duration == Duration.zero ? null : _player.state.duration;
+
+  /// Mirrors `playWhenReady` (the user's intent to play), not the momentary
+  /// `playing` flag, which can flicker false during brief buffering/seeks -
+  /// matches just_audio's old `AudioPlayer.playing` semantics so the
+  /// play/pause button doesn't flicker along with it.
+  bool get isPlaying => _player.state.playWhenReady;
+  Stream<bool> get playingStream => _player.stream.playWhenReady;
 
   Future<void> loadTrack({
     required String uriOrPath,
-    required MediaItem item,
+    required String title,
+    String? artist,
+    String? album,
+    Duration? duration,
     double tempoPercent = 100,
   }) async {
-    mediaItem.add(item);
-    final source = uriOrPath.startsWith('content://') ||
-            uriOrPath.startsWith('http://') ||
-            uriOrPath.startsWith('https://')
-        ? AudioSource.uri(Uri.parse(uriOrPath))
-        : AudioSource.uri(Uri.file(uriOrPath));
-    await _player.setAudioSource(source);
+    final uri =
+        uriOrPath.contains('://') ? uriOrPath : Uri.file(uriOrPath).toString();
+    await _player.open(mak.Media(uri), play: false);
     await setTempoPercent(tempoPercent);
+    await _player.setMediaSession(
+      (_player.state.mediaSession ?? const mak.MediaSession()).copyWith(
+        title: title,
+        artist: artist,
+        album: album,
+        duration: duration,
+      ),
+    );
   }
 
-  /// [percent] is 70-130, matching the app's tempo slider range.
-  Future<void> setTempoPercent(double percent) => _player.setSpeed(percent / 100.0);
+  /// [percent] is 70-130, matching the app's tempo slider range. mpv's own
+  /// playback rate stays pinned at 1.0 - the whole tempo change happens in
+  /// the Rubber Band filter so pitch is preserved and mpv's own
+  /// scaletempo2 doesn't also kick in.
+  Future<void> setTempoPercent(double percent) async {
+    await _player.updateAudioEffects(
+      (e) => e.copyWith(
+        rubberband: mak.RubberbandSettings(enabled: true, tempo: percent / 100.0),
+      ),
+    );
+  }
 
   /// Applies an overall volume boost (in decibels, see [VolumeBoostLimits])
   /// on top of the device's normal output, to every player - so it's heard
-  /// consistently across songs, the break track, and the beep cue. Left
-  /// disabled at 0dB so playback is bit-for-bit unchanged by default.
+  /// consistently across songs, the break track, and the beep cue. A
+  /// brick-wall limiter is enabled alongside the gain to catch peaks pushed
+  /// over full scale, mirroring what Android's LoudnessEnhancer did to
+  /// avoid immediately hard-clipping. Left disabled at 0dB so playback is
+  /// unchanged by default.
   Future<void> setVolumeBoostDb(double db) async {
     final enabled = db > 0;
     await Future.wait([
-      _loudnessEnhancer.setTargetGain(db),
-      _cueLoudnessEnhancer.setTargetGain(db),
-      _breakLoudnessEnhancer.setTargetGain(db),
+      _player.setVolumeGain(db),
+      _cuePlayer.setVolumeGain(db),
+      _breakPlayer.setVolumeGain(db),
     ]);
+    final limiter = mak.AlimiterSettings(enabled: enabled, limit: 0.99);
     await Future.wait([
-      _loudnessEnhancer.setEnabled(enabled),
-      _cueLoudnessEnhancer.setEnabled(enabled),
-      _breakLoudnessEnhancer.setEnabled(enabled),
+      _player.updateAudioEffects((e) => e.copyWith(alimiter: limiter)),
+      _cuePlayer.updateAudioEffects((e) => e.copyWith(alimiter: limiter)),
+      _breakPlayer.updateAudioEffects((e) => e.copyWith(alimiter: limiter)),
     ]);
   }
 
   /// Plays the break-countdown beep cue. `SystemSound.play` was tried here
   /// first, but it's routed through Android's UI "touch sound" effect
   /// channel - silent whenever that system setting is off, and inaudibly
-  /// quiet even when it's on. A bundled asset played through just_audio
-  /// goes out at normal media volume instead, so it's reliably audible.
+  /// quiet even when it's on. A bundled asset played at normal media volume
+  /// instead is reliably audible.
   Future<void> playBeep({double volume = 1.0}) async {
     try {
-      await _cuePlayer.setAsset('assets/sounds/beeps.mp3');
-      await _cuePlayer.setVolume(volume);
+      await _cuePlayer.open(mak.Media('asset:///assets/sounds/beeps.mp3'));
+      await _cuePlayer.setVolume(volume * 100);
       await _cuePlayer.play();
     } catch (_) {
       // A missing/undecodable cue asset shouldn't take the session down.
@@ -117,11 +161,11 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     double targetVolume = 1.0,
   }) async {
     try {
-      await _breakPlayer.setAsset('assets/sounds/break_audio_track.mp3');
-      await _breakPlayer.setLoopMode(LoopMode.one);
+      await _breakPlayer.open(mak.Media('asset:///assets/sounds/break_audio_track.mp3'));
+      await _breakPlayer.setLoop(mak.Loop.file);
       await _breakPlayer.setVolume(0);
       unawaited(_breakPlayer.play());
-      await _fade(_breakPlayer, from: 0, to: targetVolume, duration: fadeDuration);
+      await _fade(_breakPlayer, from: 0, to: targetVolume * 100, duration: fadeDuration);
     } catch (_) {
       // A missing/undecodable break track just means a silent break.
     }
@@ -129,7 +173,7 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
 
   /// Fades the break track out over [fadeDuration] and stops it.
   Future<void> fadeOutAndStopBreakTrack({Duration fadeDuration = const Duration(seconds: 2)}) async {
-    await _fade(_breakPlayer, from: _breakPlayer.volume, to: 0, duration: fadeDuration);
+    await _fade(_breakPlayer, from: _breakPlayer.state.volume, to: 0, duration: fadeDuration);
     await _breakPlayer.stop();
   }
 
@@ -141,19 +185,12 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
 
   Future<void> resumeBreakTrack() => _breakPlayer.play();
 
-  @override
   Future<void> play() => _player.play();
 
-  @override
   Future<void> pause() => _player.pause();
 
-  @override
-  Future<void> stop() async {
-    await _player.stop();
-    await super.stop();
-  }
+  Future<void> stop() => _player.stop();
 
-  @override
   Future<void> seek(Duration position) => _player.seek(position);
 
   /// Linearly fades volume to 0 over [duration], then stops playback and
@@ -165,15 +202,16 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       await _player.stop();
       return;
     }
-    final startVolume = _player.volume;
+    final startVolume = _player.state.volume;
     await _fade(_player, from: startVolume, to: 0, duration: duration);
     await _player.stop();
     await _player.setVolume(startVolume);
   }
 
-  /// Linearly ramps [player]'s volume from [from] to [to] over [duration].
+  /// Linearly ramps [player]'s volume (0-100 scale) from [from] to [to]
+  /// over [duration].
   Future<void> _fade(
-    AudioPlayer player, {
+    mak.Player player, {
     required double from,
     required double to,
     required Duration duration,
@@ -187,42 +225,13 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     for (var i = 1; i <= steps; i++) {
       await Future.delayed(stepDuration);
       final v = from + (to - from) * (i / steps);
-      await player.setVolume(v.clamp(0.0, 1.0));
+      await player.setVolume(v.clamp(0.0, 100.0));
     }
   }
 
-  void _broadcastState(PlaybackEvent event) {
-    const processingStateMap = {
-      ProcessingState.idle: AudioProcessingState.idle,
-      ProcessingState.loading: AudioProcessingState.loading,
-      ProcessingState.buffering: AudioProcessingState.buffering,
-      ProcessingState.ready: AudioProcessingState.ready,
-      ProcessingState.completed: AudioProcessingState.completed,
-    };
-    playbackState.add(playbackState.value.copyWith(
-      // MediaControl.stop is deliberately excluded: on Android 13+,
-      // audio_service's AudioService.createCustomAction() routes
-      // MediaAction.stop through a PlaybackStateCompat.CustomAction that
-      // requires resolving its icon via Resources.getIdentifier() at
-      // runtime. That lookup was observed failing on a real device (Nothing
-      // Phone 2, Android 16) with "You must specify an icon resource id to
-      // build a CustomAction" thrown on every single playback-state
-      // broadcast, which aborted notification construction entirely and
-      // meant the system media notification never appeared at all - even
-      // though play/pause/skip (native Android 13+ slots, not custom
-      // actions) worked fine. See https://github.com/ryanheise/audio_service/pull/973.
-      controls: [
-        MediaControl.skipToPrevious,
-        if (_player.playing) MediaControl.pause else MediaControl.play,
-        MediaControl.skipToNext,
-      ],
-      systemActions: const {MediaAction.seek},
-      androidCompactActionIndices: const [0, 1, 2],
-      processingState:
-          processingStateMap[_player.processingState] ?? AudioProcessingState.idle,
-      playing: _player.playing,
-      updatePosition: _player.position,
-      speed: _player.speed,
-    ));
+  Future<void> dispose() async {
+    await _player.dispose();
+    await _cuePlayer.dispose();
+    await _breakPlayer.dispose();
   }
 }

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:audio_service/audio_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
@@ -157,7 +156,12 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
     // The mini-player would otherwise show a stale ad-hoc queue and fight
     // over the same handler.
     _ref.read(nowPlayingProvider.notifier).clearSilently();
-    _ref.read(audioHandlerProvider).onTrackComplete = _onTrackNaturalEnd;
+    final handler = _ref.read(audioHandlerProvider);
+    handler.onTrackComplete = _onTrackNaturalEnd;
+    // A set runs forwards only (see PracticeSessionScreen) - lock-screen
+    // "previous" has nothing sensible to do here.
+    handler.onSkipNext = skip;
+    handler.onSkipPrevious = null;
 
     final rawEntries =
         await _ref.read(practiceSetRepositoryProvider).watchEntries(practiceSet.id).first;
@@ -226,14 +230,11 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
       await handler
           .loadTrack(
             uriOrPath: song.uri,
-            item: MediaItem(
-              id: song.id,
-              title: song.title,
-              artist: song.artist,
-              album: song.album,
-              duration:
-                  song.durationMs != null ? Duration(milliseconds: song.durationMs!) : null,
-            ),
+            title: song.title,
+            artist: song.artist,
+            album: song.album,
+            duration:
+                song.durationMs != null ? Duration(milliseconds: song.durationMs!) : null,
             tempoPercent: resolved.tempoPercent.toDouble(),
           )
           .timeout(const Duration(seconds: 15));
@@ -246,8 +247,6 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
     }
     if (generation != _generation) return;
 
-    // just_audio's play() future does not resolve until playback
-    // stops/pauses/completes, so it must not be awaited here.
     unawaited(handler.play());
 
     state = state?.copyWith(
