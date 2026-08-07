@@ -48,6 +48,7 @@ class AppSettingsRepository {
   static const _kBreakCueMode = 'break_cue_mode';
   static const _kBreakCueVolume = 'break_cue_volume_percent';
   static const _kVolumeBoost = 'volume_boost_db';
+  static const _kAudioNormalization = 'audio_normalization_enabled';
   static const _kMusicRootFolder = 'music_root_folder';
   static const _kThemeSeedOption = 'theme_seed_option';
   static const _kTempoAlgorithm = 'tempo_algorithm';
@@ -108,6 +109,16 @@ class AppSettingsRepository {
 
   Future<void> saveVolumeBoostDb(double db) =>
       _prefs.setDouble(_kVolumeBoost, db);
+
+  /// Whether songs are normalized to a consistent target loudness (see
+  /// `AudioPlayerHandler.setAudioNormalization`) - a single global setting,
+  /// same reasoning as [volumeBoostDb].
+  bool get audioNormalizationEnabled =>
+      _prefs.getBool(_kAudioNormalization) ??
+      AppDefaults.audioNormalizationEnabled;
+
+  Future<void> saveAudioNormalizationEnabled(bool enabled) =>
+      _prefs.setBool(_kAudioNormalization, enabled);
 
   /// Also a single global behavior, for the same reason as [breakCueMode].
   int get fadeOutSeconds => _prefs.getInt(_kFade) ?? AppDefaults.fadeOutSeconds;
@@ -189,6 +200,16 @@ class VolumeBoostController extends StateNotifier<double> {
   Future<void> update(double db) async {
     state = db;
     await _repo.saveVolumeBoostDb(db);
+  }
+}
+
+class AudioNormalizationController extends StateNotifier<bool> {
+  AudioNormalizationController(this._repo) : super(_repo.audioNormalizationEnabled);
+  final AppSettingsRepository _repo;
+
+  Future<void> update(bool enabled) async {
+    state = enabled;
+    await _repo.saveAudioNormalizationEnabled(enabled);
   }
 }
 

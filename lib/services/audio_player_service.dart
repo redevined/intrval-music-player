@@ -162,26 +162,95 @@ class AudioPlayerHandler {
     }
   }
 
+  /// Target integrated loudness for normalization, in LUFS - matches
+  /// modern streaming-service targets (Spotify, YouTube Music) rather than
+  /// EBU broadcast's -23/-24 LUFS, which would make everything sound
+  /// uniformly quiet.
+  static const double _normalizationTargetLufs = -14.0;
+
+  StreamSubscription<mak.LoudnessScan?>? _loudnessScanSub;
+  double _volumeBoostDb = 0;
+
+  /// Static per-track gain (dB) computed from the current track's measured
+  /// loudness - a single fixed value applied for that track's whole
+  /// duration, not a continuously-adapting one. This is what makes
+  /// normalization act *across* tracks (leveling one song against another)
+  /// rather than *within* one (evening out quiet/loud passages inside the
+  /// same song, which an always-on dynamics filter like `loudnorm`'s
+  /// single-pass "dynamic" mode would also do - not what's wanted here).
+  double _normalizationGainDb = 0;
+
+  /// Normalizes songs to a consistent target loudness by measuring each
+  /// track's whole-file integrated loudness ([mak.PlayerStream.loudness] -
+  /// decoded off the playback path at many times realtime, landing before
+  /// the track is audible) and applying the one gain that levels it to
+  /// [_normalizationTargetLufs], the same way for the entire track - see
+  /// [_normalizationGainDb]. Combined with [_volumeBoostDb] into a single
+  /// [Player.setVolumeGain] call via [_applyVolumeGain], since mpv only
+  /// has the one gain stage.
+  ///
+  /// The scan is lazy (mpv only runs it while `stream.loudness` has a
+  /// listener), so subscribing/cancelling here directly gates the native
+  /// work - nothing extra runs while this is off. Applied only to the main
+  /// player - the beep cue and break track are fixed bundled assets, not
+  /// user songs, so there's nothing to normalize there.
+  Future<void> setAudioNormalization(bool enabled) async {
+    if (enabled) {
+      _loudnessScanSub ??= _player.stream.loudness.listen((scan) {
+        if (scan == null || scan.state != mak.LoudnessScanState.ready ||
+            scan.integrated == null) {
+          // Null lands on every track-change boundary - clear the previous
+          // track's gain immediately rather than carrying it over into the
+          // new (not-yet-measured) one. Non-ready/non-measurable results
+          // (failed/unavailable, e.g. adaptive/live sources) leave playback
+          // at the unnormalized level rather than guessing.
+          _normalizationGainDb = 0;
+          unawaited(_applyVolumeGain());
+          return;
+        }
+        _normalizationGainDb =
+            (_normalizationTargetLufs - scan.integrated!).clamp(-24.0, 24.0);
+        unawaited(_applyVolumeGain());
+      });
+    } else {
+      await _loudnessScanSub?.cancel();
+      _loudnessScanSub = null;
+      _normalizationGainDb = 0;
+      await _applyVolumeGain();
+    }
+  }
+
   /// Applies an overall volume boost (in decibels, see [VolumeBoostLimits])
   /// on top of the device's normal output, to every player - so it's heard
-  /// consistently across songs, the break track, and the beep cue. A
-  /// brick-wall limiter is enabled alongside the gain to catch peaks pushed
-  /// over full scale, mirroring what Android's LoudnessEnhancer did to
-  /// avoid immediately hard-clipping. Left disabled at 0dB so playback is
-  /// unchanged by default.
+  /// consistently across songs, the break track, and the beep cue. Left
+  /// disabled at 0dB so playback is unchanged by default.
   Future<void> setVolumeBoostDb(double db) async {
-    final enabled = db > 0;
+    _volumeBoostDb = db;
     await Future.wait([
-      _player.setVolumeGain(db),
-      _cuePlayer.setVolumeGain(db),
-      _breakPlayer.setVolumeGain(db),
+      _applyVolumeGain(),
+      _applyGainAndLimiter(_cuePlayer, db),
+      _applyGainAndLimiter(_breakPlayer, db),
     ]);
-    final limiter = mak.AlimiterSettings(enabled: enabled, limit: 0.99);
-    await Future.wait([
-      _player.updateAudioEffects((e) => e.copyWith(alimiter: limiter)),
-      _cuePlayer.updateAudioEffects((e) => e.copyWith(alimiter: limiter)),
-      _breakPlayer.updateAudioEffects((e) => e.copyWith(alimiter: limiter)),
-    ]);
+  }
+
+  /// Applies the combined boost + normalization gain to the main player
+  /// only - [_cuePlayer]/[_breakPlayer] get just the boost (see
+  /// [setAudioNormalization]).
+  Future<void> _applyVolumeGain() =>
+      _applyGainAndLimiter(_player, _volumeBoostDb + _normalizationGainDb);
+
+  /// Sets [player]'s gain and toggles its brick-wall limiter alongside it
+  /// (enabled whenever the gain could push a signal over full scale),
+  /// mirroring what Android's LoudnessEnhancer did to avoid immediately
+  /// hard-clipping.
+  Future<void> _applyGainAndLimiter(mak.Player player, double gainDb) async {
+    final clamped = gainDb.clamp(-24.0, 24.0);
+    await player.setVolumeGain(clamped);
+    await player.updateAudioEffects(
+      (e) => e.copyWith(
+        alimiter: mak.AlimiterSettings(enabled: clamped > 0, limit: 0.99),
+      ),
+    );
   }
 
   /// Plays the break-countdown beep cue. `SystemSound.play` was tried here
@@ -277,6 +346,7 @@ class AudioPlayerHandler {
   }
 
   Future<void> dispose() async {
+    await _loudnessScanSub?.cancel();
     await _player.dispose();
     await _cuePlayer.dispose();
     await _breakPlayer.dispose();

@@ -29,6 +29,7 @@ class _IntrvalAppState extends ConsumerState<IntrvalApp> {
       final handler = ref.read(audioHandlerProvider);
       handler.setVolumeBoostDb(ref.read(volumeBoostDbProvider));
       handler.setTempoAlgorithm(ref.read(tempoAlgorithmProvider));
+      handler.setAudioNormalization(ref.read(audioNormalizationEnabledProvider));
     });
   }
 
@@ -41,6 +42,9 @@ class _IntrvalAppState extends ConsumerState<IntrvalApp> {
     });
     ref.listen<TempoAlgorithm>(tempoAlgorithmProvider, (previous, next) {
       ref.read(audioHandlerProvider).setTempoAlgorithm(next);
+    });
+    ref.listen<bool>(audioNormalizationEnabledProvider, (previous, next) {
+      ref.read(audioHandlerProvider).setAudioNormalization(next);
     });
 
     return MaterialApp(

@@ -83,6 +83,15 @@ final volumeBoostDbProvider =
       return VolumeBoostController(ref.watch(appSettingsRepositoryProvider));
     });
 
+/// Whether songs are normalized to a consistent target loudness - a single
+/// global setting, same reasoning as [volumeBoostDbProvider].
+final audioNormalizationEnabledProvider =
+    StateNotifierProvider<AudioNormalizationController, bool>((ref) {
+      return AudioNormalizationController(
+        ref.watch(appSettingsRepositoryProvider),
+      );
+    });
+
 /// Same reasoning as [breakCueModeProvider]: a single global behavior rather
 /// than something worth deciding per practice set.
 final fadeOutSecondsProvider =

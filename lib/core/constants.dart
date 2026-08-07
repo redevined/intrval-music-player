@@ -23,6 +23,11 @@ class AppDefaults {
   /// playback is unchanged unless the user explicitly turns it up.
   static const double volumeBoostDb = 0.0;
 
+  /// Audio normalization (see [AudioPlayerHandler.setAudioNormalization])
+  /// is off by default, same reasoning as [volumeBoostDb] - playback is
+  /// unchanged unless explicitly opted into.
+  static const bool audioNormalizationEnabled = false;
+
   /// Default folder auto-scanned for music, used until the user picks a
   /// different one in Settings.
   static const String musicRootFolder = '/storage/emulated/0/Music';

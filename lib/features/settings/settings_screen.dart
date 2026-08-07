@@ -489,6 +489,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final breakCueVolume = ref.watch(breakCueVolumeProvider);
     final volumeBoostDb = ref.watch(volumeBoostDbProvider);
     final tempoAlgorithm = ref.watch(tempoAlgorithmProvider);
+    final audioNormalizationEnabled = ref.watch(audioNormalizationEnabledProvider);
     final fadeOutSeconds = ref.watch(fadeOutSecondsProvider);
     final hiddenCount = ref.watch(_hiddenSongCountProvider).valueOrNull;
     final version = ref.watch(packageInfoProvider).valueOrNull?.version;
@@ -513,6 +514,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: const Text('Tempo algorithm'),
             subtitle: Text(_tempoAlgorithmLabel(tempoAlgorithm)),
             onTap: () => _pickTempoAlgorithm(context, ref, tempoAlgorithm),
+          ),
+          SwitchListTile(
+            title: const Text('Audio normalization'),
+            subtitle: const Text(
+              'Evens out volume differences between songs',
+            ),
+            value: audioNormalizationEnabled,
+            onChanged: (enabled) => ref
+                .read(audioNormalizationEnabledProvider.notifier)
+                .update(enabled),
           ),
           const Divider(),
           const _SectionHeader('Sets'),
