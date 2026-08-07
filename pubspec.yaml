@@ -52,10 +52,10 @@ dependencies:
   # native Android/iOS module, unlike audiotags (see ADR 0008).
   audio_metadata_reader: ^1.7.1
 
-  # Playback engine + background/lock-screen media session
-  just_audio: ^0.9.42
-  audio_service: ^0.18.15
-  audio_session: ^0.1.24
+  # Playback engine (libmpv + Rubber Band time-stretching) + its own
+  # background/lock-screen media session - see ADR on the Sonic -> Rubber
+  # Band tempo-engine migration.
+  mpv_audio_kit: ^0.4.4
 
   # On-device BPM detection: extracts an amplitude envelope from the audio
   # file, which we then run a beat-periodicity (autocorrelation) analysis on.

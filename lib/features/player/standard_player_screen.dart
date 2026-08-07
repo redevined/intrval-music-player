@@ -1,4 +1,3 @@
-import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -118,11 +117,11 @@ class _StandardPlayerScreenState extends ConsumerState<StandardPlayerScreen> {
                 onPressed: controller.previous,
               ),
               const SizedBox(width: 20),
-              StreamBuilder<PlaybackState>(
-                stream: handler.playbackState,
+              StreamBuilder<bool>(
+                stream: handler.playingStream,
                 builder: (context, snapshot) {
                   return PlayPauseButton(
-                    playing: snapshot.data?.playing ?? false,
+                    playing: snapshot.data ?? false,
                     onPressed: controller.togglePlayPause,
                   );
                 },

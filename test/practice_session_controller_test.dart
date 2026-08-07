@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:audio_service/audio_service.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,9 +25,18 @@ class FakeAudioHandler implements AudioPlayerHandler {
   void Function()? onTrackComplete;
 
   @override
+  void Function()? onSkipNext;
+
+  @override
+  void Function()? onSkipPrevious;
+
+  @override
   Future<void> loadTrack({
     required String uriOrPath,
-    required MediaItem item,
+    required String title,
+    String? artist,
+    String? album,
+    Duration? duration,
     double tempoPercent = 100,
   }) async {
     loadedUris.add(uriOrPath);

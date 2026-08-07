@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:audio_service/audio_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
@@ -76,14 +75,18 @@ class NowPlayingController extends StateNotifier<NowPlayingState?> {
 
   final Ref _ref;
 
-  /// Re-wires the audio handler's completion callback to this controller.
-  /// [PracticeSessionController] takes exclusive ownership of that callback
-  /// while a practice session is active and calls this when the session ends
-  /// so mini-player auto-advance resumes afterwards.
+  /// Re-wires the audio handler's completion/skip callbacks to this
+  /// controller. [PracticeSessionController] takes exclusive ownership of
+  /// those callbacks while a practice session is active and calls this when
+  /// the session ends so mini-player auto-advance (and lock-screen
+  /// next/previous) resume afterwards.
   void attachTrackCompleteHandler() => _attachTrackCompleteHandler();
 
   void _attachTrackCompleteHandler() {
-    _ref.read(audioHandlerProvider).onTrackComplete = _onTrackComplete;
+    final handler = _ref.read(audioHandlerProvider);
+    handler.onTrackComplete = _onTrackComplete;
+    handler.onSkipNext = () => unawaited(next());
+    handler.onSkipPrevious = () => unawaited(previous());
   }
 
   Future<void> playQueue(List<Song> songs, int initialIndex, {String? queueTitle}) async {
@@ -110,18 +113,13 @@ class NowPlayingController extends StateNotifier<NowPlayingState?> {
     final song = s.currentSong;
     await handler.loadTrack(
       uriOrPath: song.uri,
-      item: MediaItem(
-        id: song.id,
-        title: song.title,
-        artist: song.artist,
-        album: song.album,
-        duration:
-            song.durationMs != null ? Duration(milliseconds: song.durationMs!) : null,
-      ),
+      title: song.title,
+      artist: song.artist,
+      album: song.album,
+      duration:
+          song.durationMs != null ? Duration(milliseconds: song.durationMs!) : null,
       tempoPercent: s.tempoPercent.toDouble(),
     );
-    // just_audio's play() future does not resolve until playback
-    // stops/pauses/completes - must not be awaited here.
     unawaited(handler.play());
   }
 
