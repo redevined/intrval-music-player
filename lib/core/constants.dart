@@ -34,6 +34,15 @@ class TempoLimits {
   static const int stepPercent = 1;
 }
 
+/// The DSP algorithm used to change playback tempo while preserving pitch -
+/// see the ADR on migrating off just_audio/Sonic. Both run through
+/// mpv_audio_kit: [rubberband] uses the Rubber Band time-stretch filter
+/// (mpv's own rate stays pinned at 1.0); [scaletempo2] instead drives mpv's
+/// native playback rate directly with pitch correction enabled. Rubber Band
+/// sounds noticeably cleaner at moderate slowdowns and is the default, but
+/// scaletempo2 uses less CPU - worth offering as an alternative.
+enum TempoAlgorithm { rubberband, scaletempo2 }
+
 /// Overall volume boost applies gain beyond the device's normal 100%
 /// output via Android's LoudnessEnhancer, which uses dynamic range
 /// compression rather than simple digital gain to raise perceived

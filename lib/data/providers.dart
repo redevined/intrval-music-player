@@ -4,6 +4,7 @@ import 'package:material_color_utilities/material_color_utilities.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/constants.dart';
 import '../core/theme.dart';
 import '../services/audio_player_service.dart';
 import '../services/bpm_detection_service.dart';
@@ -87,6 +88,14 @@ final volumeBoostDbProvider =
 final fadeOutSecondsProvider =
     StateNotifierProvider<FadeOutSecondsController, int>((ref) {
       return FadeOutSecondsController(ref.watch(appSettingsRepositoryProvider));
+    });
+
+/// The tempo-stretch DSP algorithm (see [TempoAlgorithm]) - a single global
+/// setting, same reasoning as [breakCueModeProvider]. Defaults to Rubber
+/// Band.
+final tempoAlgorithmProvider =
+    StateNotifierProvider<TempoAlgorithmController, TempoAlgorithm>((ref) {
+      return TempoAlgorithmController(ref.watch(appSettingsRepositoryProvider));
     });
 
 /// The app-icon theme-cycling easter egg's current choice - see

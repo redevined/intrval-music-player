@@ -50,6 +50,7 @@ class AppSettingsRepository {
   static const _kVolumeBoost = 'volume_boost_db';
   static const _kMusicRootFolder = 'music_root_folder';
   static const _kThemeSeedOption = 'theme_seed_option';
+  static const _kTempoAlgorithm = 'tempo_algorithm';
 
   String get musicRootFolder =>
       _prefs.getString(_kMusicRootFolder) ?? AppDefaults.musicRootFolder;
@@ -126,6 +127,19 @@ class AppSettingsRepository {
 
   Future<void> saveThemeSeedOption(ThemeSeedOption option) =>
       _prefs.setString(_kThemeSeedOption, option.name);
+
+  /// The tempo-stretch DSP algorithm (see [TempoAlgorithm]) - a single
+  /// global setting, not something worth deciding per practice set.
+  TempoAlgorithm get tempoAlgorithm {
+    final raw = _prefs.getString(_kTempoAlgorithm);
+    return TempoAlgorithm.values.firstWhere(
+      (a) => a.name == raw,
+      orElse: () => TempoAlgorithm.rubberband,
+    );
+  }
+
+  Future<void> saveTempoAlgorithm(TempoAlgorithm algorithm) =>
+      _prefs.setString(_kTempoAlgorithm, algorithm.name);
 }
 
 class SetDefaultsController extends StateNotifier<SetDefaults> {
@@ -185,6 +199,16 @@ class FadeOutSecondsController extends StateNotifier<int> {
   Future<void> update(int seconds) async {
     state = seconds;
     await _repo.saveFadeOutSeconds(seconds);
+  }
+}
+
+class TempoAlgorithmController extends StateNotifier<TempoAlgorithm> {
+  TempoAlgorithmController(this._repo) : super(_repo.tempoAlgorithm);
+  final AppSettingsRepository _repo;
+
+  Future<void> update(TempoAlgorithm algorithm) async {
+    state = algorithm;
+    await _repo.saveTempoAlgorithm(algorithm);
   }
 }
 

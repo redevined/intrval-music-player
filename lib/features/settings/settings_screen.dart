@@ -309,6 +309,49 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  String _tempoAlgorithmLabel(TempoAlgorithm algorithm) {
+    switch (algorithm) {
+      case TempoAlgorithm.rubberband:
+        return 'Rubber Band (recommended)';
+      case TempoAlgorithm.scaletempo2:
+        return 'scaletempo2';
+    }
+  }
+
+  Future<void> _pickTempoAlgorithm(
+    BuildContext context,
+    WidgetRef ref,
+    TempoAlgorithm current,
+  ) async {
+    final selected = await showModalBottomSheet<TempoAlgorithm>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: RadioGroup<TempoAlgorithm>(
+          groupValue: current,
+          onChanged: (v) => Navigator.of(context).pop(v),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<TempoAlgorithm>(
+                title: const Text('Rubber Band'),
+                subtitle: const Text('Cleaner sound, especially at moderate slowdowns'),
+                value: TempoAlgorithm.rubberband,
+              ),
+              RadioListTile<TempoAlgorithm>(
+                title: const Text('scaletempo2'),
+                subtitle: const Text("mpv's built-in engine - lighter on CPU"),
+                value: TempoAlgorithm.scaletempo2,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (selected != null && selected != current) {
+      await ref.read(tempoAlgorithmProvider.notifier).update(selected);
+    }
+  }
+
   Future<void> _editVolumeBoost(
     BuildContext context,
     WidgetRef ref,
@@ -445,6 +488,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final breakCueMode = ref.watch(breakCueModeProvider);
     final breakCueVolume = ref.watch(breakCueVolumeProvider);
     final volumeBoostDb = ref.watch(volumeBoostDbProvider);
+    final tempoAlgorithm = ref.watch(tempoAlgorithmProvider);
     final fadeOutSeconds = ref.watch(fadeOutSecondsProvider);
     final hiddenCount = ref.watch(_hiddenSongCountProvider).valueOrNull;
     final version = ref.watch(packageInfoProvider).valueOrNull?.version;
@@ -488,6 +532,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   : '+${volumeBoostDb.toStringAsFixed(1)} dB',
             ),
             onTap: () => _editVolumeBoost(context, ref, volumeBoostDb),
+          ),
+          ListTile(
+            title: const Text('Tempo algorithm'),
+            subtitle: Text(_tempoAlgorithmLabel(tempoAlgorithm)),
+            onTap: () => _pickTempoAlgorithm(context, ref, tempoAlgorithm),
           ),
           const Divider(),
           const _SectionHeader('Library'),

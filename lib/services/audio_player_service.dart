@@ -2,15 +2,18 @@ import 'dart:async';
 
 import 'package:mpv_audio_kit/mpv_audio_kit.dart' as mak;
 
+import '../core/constants.dart';
+
 /// Wraps three `mpv_audio_kit` players (main track, break-countdown beep,
 /// break audio track) and the OS media session (lock-screen / notification
 /// controls) for the main player, behind the same small surface the rest of
 /// the app used against just_audio + audio_service.
 ///
-/// Tempo is applied via the Rubber Band time-stretch DSP filter
-/// (`RubberbandSettings`) rather than mpv's own playback rate, so pitch is
-/// preserved identically across platforms - see the ADR on migrating off
-/// just_audio/Sonic.
+/// Tempo is applied via one of two swappable algorithms - see
+/// [TempoAlgorithm] and [setTempoAlgorithm] - defaulting to the Rubber Band
+/// time-stretch DSP filter (`RubberbandSettings`), which preserves pitch
+/// more cleanly than mpv's own scaletempo2 at moderate slowdowns - see the
+/// ADR on migrating off just_audio/Sonic.
 class AudioPlayerHandler {
   AudioPlayerHandler() {
     _player.stream.completed.listen((completed) {
@@ -103,16 +106,51 @@ class AudioPlayerHandler {
     );
   }
 
-  /// [percent] is 70-130, matching the app's tempo slider range. mpv's own
-  /// playback rate stays pinned at 1.0 - the whole tempo change happens in
-  /// the Rubber Band filter so pitch is preserved and mpv's own
-  /// scaletempo2 doesn't also kick in.
+  TempoAlgorithm _tempoAlgorithm = TempoAlgorithm.rubberband;
+  double _tempoPercent = 100;
+
+  /// [percent] is 70-130, matching the app's tempo slider range.
   Future<void> setTempoPercent(double percent) async {
-    await _player.updateAudioEffects(
-      (e) => e.copyWith(
-        rubberband: mak.RubberbandSettings(enabled: true, tempo: percent / 100.0),
-      ),
-    );
+    _tempoPercent = percent;
+    await _applyTempo();
+  }
+
+  /// Switches which DSP does the tempo/pitch stretching - see
+  /// [TempoAlgorithm]. Re-applies the current tempo through the new
+  /// algorithm immediately, so a change made mid-playback takes effect
+  /// without needing a seek/reload.
+  Future<void> setTempoAlgorithm(TempoAlgorithm algorithm) async {
+    if (_tempoAlgorithm == algorithm) return;
+    _tempoAlgorithm = algorithm;
+    await _applyTempo();
+  }
+
+  /// Applies [_tempoPercent] through whichever engine [_tempoAlgorithm]
+  /// currently selects. The two engines must never both be "live" at once
+  /// (their effects would compound), so each branch turns the other one
+  /// off - pinning mpv's native rate back to 1.0 before enabling the
+  /// Rubber Band filter, or disabling the filter before handing the rate
+  /// to mpv - rather than just toggling the one that changed.
+  Future<void> _applyTempo() async {
+    final factor = _tempoPercent / 100.0;
+    switch (_tempoAlgorithm) {
+      case TempoAlgorithm.rubberband:
+        await _player.setRate(1.0);
+        await _player.setPitchCorrection(false);
+        await _player.updateAudioEffects(
+          (e) => e.copyWith(
+            rubberband: mak.RubberbandSettings(enabled: true, tempo: factor),
+          ),
+        );
+      case TempoAlgorithm.scaletempo2:
+        await _player.updateAudioEffects(
+          (e) => e.copyWith(
+            rubberband: mak.RubberbandSettings(enabled: false, tempo: factor),
+          ),
+        );
+        await _player.setPitchCorrection(true);
+        await _player.setRate(factor);
+    }
   }
 
   /// Applies an overall volume boost (in decibels, see [VolumeBoostLimits])

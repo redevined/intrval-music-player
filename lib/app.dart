@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/constants.dart';
 import 'core/theme.dart';
 import 'data/providers.dart';
 import 'features/library/library_screen.dart';
@@ -22,12 +23,12 @@ class _IntrvalAppState extends ConsumerState<IntrvalApp> {
   @override
   void initState() {
     super.initState();
-    // Applies the persisted volume boost on launch; live changes afterwards
-    // are picked up by the ref.listen below.
+    // Applies the persisted volume boost + tempo algorithm on launch; live
+    // changes afterwards are picked up by the ref.listen calls below.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref
-          .read(audioHandlerProvider)
-          .setVolumeBoostDb(ref.read(volumeBoostDbProvider));
+      final handler = ref.read(audioHandlerProvider);
+      handler.setVolumeBoostDb(ref.read(volumeBoostDbProvider));
+      handler.setTempoAlgorithm(ref.read(tempoAlgorithmProvider));
     });
   }
 
@@ -37,6 +38,9 @@ class _IntrvalAppState extends ConsumerState<IntrvalApp> {
     final corePalette = ref.watch(systemCorePaletteProvider).valueOrNull;
     ref.listen<double>(volumeBoostDbProvider, (previous, next) {
       ref.read(audioHandlerProvider).setVolumeBoostDb(next);
+    });
+    ref.listen<TempoAlgorithm>(tempoAlgorithmProvider, (previous, next) {
+      ref.read(audioHandlerProvider).setTempoAlgorithm(next);
     });
 
     return MaterialApp(
