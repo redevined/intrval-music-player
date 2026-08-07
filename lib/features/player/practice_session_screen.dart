@@ -119,6 +119,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         ),
       ],
       artwork: PlayerArtwork(
+        artworkPath: session.currentSong?.artworkPath,
         icon: breaking ? Icons.self_improvement : Icons.music_note,
         dimmed: breaking,
         badge: breaking ? const Text('Break') : null,

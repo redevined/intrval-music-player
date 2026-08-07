@@ -74,7 +74,7 @@ class _StandardPlayerScreenState extends ConsumerState<StandardPlayerScreen> {
           onPressed: controller.toggleFavoriteCurrent,
         ),
       ],
-      artwork: const PlayerArtwork(),
+      artwork: PlayerArtwork(artworkPath: song.artworkPath),
       contextHeader: nowPlaying.songs.length > 1
           ? _QueuePositionLabel(
               index: nowPlaying.index,

@@ -1,16 +1,24 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
-/// Large rounded tile that stands in for album art (which the library doesn't
-/// extract yet). A soft two-tone gradient plus an optional badge keeps the
-/// player screens from looking like a bare form, without pretending to be
-/// artwork that isn't there.
+/// Large rounded tile showing a song's cover art, when it has one embedded
+/// (see `FileImportService.extractMetadata`). Falls back to a soft two-tone
+/// gradient with an icon - and always does so during a session break, when
+/// there's no "current song" to show art for - so the player screens never
+/// look like a bare form, without pretending to be artwork that isn't there.
 class PlayerArtwork extends StatelessWidget {
   const PlayerArtwork({
     super.key,
+    this.artworkPath,
     this.icon = Icons.music_note,
     this.badge,
     this.dimmed = false,
   });
+
+  /// Path to the extracted cover art file, if any - see
+  /// `Song.artworkPath`/`FileImportService`.
+  final String? artworkPath;
 
   final IconData icon;
 
@@ -38,33 +46,47 @@ class PlayerArtwork extends StatelessWidget {
                 : [colors.primaryContainer, colors.tertiaryContainer],
           ),
         ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 96,
-              color: (dimmed ? colors.onSurfaceVariant : colors.onPrimaryContainer)
-                  .withValues(alpha: 0.55),
-            ),
-            if (badge != null)
-              Positioned(
-                bottom: 16,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: colors.surface.withValues(alpha: 0.85),
-                    borderRadius: BorderRadius.circular(12),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 96,
+                color: (dimmed ? colors.onSurfaceVariant : colors.onPrimaryContainer)
+                    .withValues(alpha: 0.55),
+              ),
+              if (artworkPath != null && !dimmed)
+                Positioned.fill(
+                  child: Image.file(
+                    File(artworkPath!),
+                    fit: BoxFit.cover,
+                    // Falls through to the icon underneath if the file is
+                    // missing or unreadable, rather than erroring out.
+                    errorBuilder: (context, error, stackTrace) =>
+                        const SizedBox.shrink(),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    child: DefaultTextStyle.merge(
-                      style: Theme.of(context).textTheme.labelLarge,
-                      child: badge!,
+                ),
+              if (badge != null)
+                Positioned(
+                  bottom: 16,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: colors.surface.withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: DefaultTextStyle.merge(
+                        style: Theme.of(context).textTheme.labelLarge,
+                        child: badge!,
+                      ),
                     ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

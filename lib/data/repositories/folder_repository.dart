@@ -82,6 +82,7 @@ class FolderRepository {
         artist: metadata.artist,
         album: metadata.album,
         durationMs: metadata.durationMs,
+        artworkPath: metadata.artworkPath,
         sourceFolderId: folderId,
       );
     }
