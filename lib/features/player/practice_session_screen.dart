@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -118,11 +120,16 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
           },
         ),
       ],
-      artwork: PlayerArtwork(
-        artworkPath: session.currentSong?.artworkPath,
-        icon: breaking ? Icons.self_improvement : Icons.music_note,
-        dimmed: breaking,
-        badge: breaking ? const Text('Break') : null,
+      artwork: StreamBuilder<Uint8List?>(
+        stream: handler.coverArtStream,
+        builder: (context, snapshot) {
+          return PlayerArtwork(
+            artworkBytes: snapshot.data,
+            icon: breaking ? Icons.self_improvement : Icons.music_note,
+            dimmed: breaking,
+            badge: breaking ? const Text('Break') : null,
+          );
+        },
       ),
       contextHeader: entry == null
           ? null

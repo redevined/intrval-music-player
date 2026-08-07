@@ -2,12 +2,8 @@ import 'dart:io';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-import 'package:uuid/uuid.dart';
 
 import 'local_file_staging.dart';
-
-const _uuid = Uuid();
 
 /// Normalized metadata for a track, regardless of whether it was read from
 /// a plain filesystem path or a SAF `content://` URI.
@@ -17,17 +13,12 @@ class ImportedTrackMetadata {
     this.artist,
     this.album,
     this.durationMs,
-    this.artworkPath,
   });
 
   final String title;
   final String? artist;
   final String? album;
   final int? durationMs;
-
-  /// Path to the embedded cover art, extracted and saved to app storage by
-  /// [FileImportService.extractMetadata] - null if the file had none.
-  final String? artworkPath;
 }
 
 const _audioExtensions = {
@@ -74,14 +65,13 @@ class FileImportService {
   Future<ImportedTrackMetadata> extractMetadata(String uriOrPath) async {
     final staged = await stageLocalFile(uriOrPath);
     try {
-      final tag = readMetadata(File(staged.path), getImage: true);
+      final tag = readMetadata(File(staged.path), getImage: false);
       final fallbackTitle = p.basenameWithoutExtension(uriOrPath);
       return ImportedTrackMetadata(
         title: (tag.title?.isNotEmpty ?? false) ? tag.title! : fallbackTitle,
         artist: tag.artist,
         album: tag.album,
         durationMs: tag.duration?.inMilliseconds,
-        artworkPath: await _saveArtwork(tag.pictures),
       );
     } catch (_) {
       // Corrupt/unsupported tag data shouldn't block import: fall back to
@@ -91,39 +81,6 @@ class FileImportService {
       );
     } finally {
       await staged.dispose();
-    }
-  }
-
-  /// Saves the first embedded cover art (if any) to a file under app
-  /// storage and returns its path. Best-effort: a failure here (unwritable
-  /// disk, malformed image bytes) shouldn't block importing the song
-  /// itself, so any error just results in no artwork rather than a thrown
-  /// exception.
-  Future<String?> _saveArtwork(List<Picture> pictures) async {
-    if (pictures.isEmpty) return null;
-    try {
-      final supportDir = await getApplicationSupportDirectory();
-      final artworkDir = Directory(p.join(supportDir.path, 'artwork'));
-      await artworkDir.create(recursive: true);
-      final extension = _extensionForMimeType(pictures.first.mimetype);
-      final file = File(p.join(artworkDir.path, '${_uuid.v4()}.$extension'));
-      await file.writeAsBytes(pictures.first.bytes);
-      return file.path;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  String _extensionForMimeType(String mimetype) {
-    switch (mimetype.toLowerCase()) {
-      case 'image/png':
-        return 'png';
-      case 'image/webp':
-        return 'webp';
-      case 'image/gif':
-        return 'gif';
-      default:
-        return 'jpg';
     }
   }
 }

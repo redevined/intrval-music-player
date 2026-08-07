@@ -1,24 +1,24 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-/// Large rounded tile showing a song's cover art, when it has one embedded
-/// (see `FileImportService.extractMetadata`). Falls back to a soft two-tone
-/// gradient with an icon - and always does so during a session break, when
-/// there's no "current song" to show art for - so the player screens never
-/// look like a bare form, without pretending to be artwork that isn't there.
+/// Large rounded tile showing a song's cover art, when it has one embedded.
+/// Falls back to a soft two-tone gradient with an icon - and always does so
+/// during a session break, when there's no "current song" to show art for -
+/// so the player screens never look like a bare form, without pretending to
+/// be artwork that isn't there.
 class PlayerArtwork extends StatelessWidget {
   const PlayerArtwork({
     super.key,
-    this.artworkPath,
+    this.artworkBytes,
     this.icon = Icons.music_note,
     this.badge,
     this.dimmed = false,
   });
 
-  /// Path to the extracted cover art file, if any - see
-  /// `Song.artworkPath`/`FileImportService`.
-  final String? artworkPath;
+  /// Cover art read live off the currently loaded track by the playback
+  /// engine itself - see `AudioPlayerHandler.coverArtStream`.
+  final Uint8List? artworkBytes;
 
   final IconData icon;
 
@@ -57,13 +57,14 @@ class PlayerArtwork extends StatelessWidget {
                 color: (dimmed ? colors.onSurfaceVariant : colors.onPrimaryContainer)
                     .withValues(alpha: 0.55),
               ),
-              if (artworkPath != null && !dimmed)
+              if (!dimmed && artworkBytes != null)
                 Positioned.fill(
-                  child: Image.file(
-                    File(artworkPath!),
+                  child: Image.memory(
+                    artworkBytes!,
                     fit: BoxFit.cover,
-                    // Falls through to the icon underneath if the file is
-                    // missing or unreadable, rather than erroring out.
+                    gaplessPlayback: true,
+                    // Falls through to the icon underneath on malformed
+                    // image bytes, rather than erroring out.
                     errorBuilder: (context, error, stackTrace) =>
                         const SizedBox.shrink(),
                   ),

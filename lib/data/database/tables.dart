@@ -14,7 +14,6 @@ class Songs extends Table {
   TextColumn get artist => text().nullable()();
   TextColumn get album => text().nullable()();
   IntColumn get durationMs => integer().nullable()();
-  TextColumn get artworkPath => text().nullable()();
 
   /// BPM automatically detected by the on-device DSP pipeline.
   RealColumn get bpmDetected => real().nullable()();

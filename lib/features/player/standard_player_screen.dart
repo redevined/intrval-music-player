@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -74,7 +76,12 @@ class _StandardPlayerScreenState extends ConsumerState<StandardPlayerScreen> {
           onPressed: controller.toggleFavoriteCurrent,
         ),
       ],
-      artwork: PlayerArtwork(artworkPath: song.artworkPath),
+      artwork: StreamBuilder<Uint8List?>(
+        stream: handler.coverArtStream,
+        builder: (context, snapshot) {
+          return PlayerArtwork(artworkBytes: snapshot.data);
+        },
+      ),
       contextHeader: nowPlaying.songs.length > 1
           ? _QueuePositionLabel(
               index: nowPlaying.index,

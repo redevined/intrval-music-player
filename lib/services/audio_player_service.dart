@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:mpv_audio_kit/mpv_audio_kit.dart' as mak;
 
@@ -76,6 +77,14 @@ class AudioPlayerHandler {
   Duration get position => _player.state.position;
   Duration? get duration =>
       _player.state.duration == Duration.zero ? null : _player.state.duration;
+
+  /// Embedded cover art for whichever track is currently loaded, read
+  /// straight off the file by the engine itself - correct immediately, even
+  /// for tracks imported before `FileImportService` started extracting and
+  /// caching artwork at import time. Emits once per file load: the art's
+  /// raw bytes, or null if that file has none.
+  Stream<Uint8List?> get coverArtStream =>
+      _player.stream.coverArt.map((art) => art?.bytes);
 
   /// Mirrors `playWhenReady` (the user's intent to play), not the momentary
   /// `playing` flag, which can flicker false during brief buffering/seeks -

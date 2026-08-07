@@ -78,7 +78,6 @@ class SongRepository {
     String? artist,
     String? album,
     int? durationMs,
-    String? artworkPath,
     String? sourceFolderId,
   }) {
     return _db.transaction(() async {
@@ -101,7 +100,6 @@ class SongRepository {
               artist: Value(artist),
               album: Value(album),
               durationMs: Value(durationMs),
-              artworkPath: Value(artworkPath),
               sourceFolderId: Value(sourceFolderId),
             ),
             mode: InsertMode.insertOrIgnore,

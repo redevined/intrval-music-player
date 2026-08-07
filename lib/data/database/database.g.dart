@@ -379,17 +379,6 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _artworkPathMeta = const VerificationMeta(
-    'artworkPath',
-  );
-  @override
-  late final GeneratedColumn<String> artworkPath = GeneratedColumn<String>(
-    'artwork_path',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
   static const VerificationMeta _bpmDetectedMeta = const VerificationMeta(
     'bpmDetected',
   );
@@ -476,7 +465,6 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
     artist,
     album,
     durationMs,
-    artworkPath,
     bpmDetected,
     bpmManual,
     dateAdded,
@@ -533,15 +521,6 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
       context.handle(
         _durationMsMeta,
         durationMs.isAcceptableOrUnknown(data['duration_ms']!, _durationMsMeta),
-      );
-    }
-    if (data.containsKey('artwork_path')) {
-      context.handle(
-        _artworkPathMeta,
-        artworkPath.isAcceptableOrUnknown(
-          data['artwork_path']!,
-          _artworkPathMeta,
-        ),
       );
     }
     if (data.containsKey('bpm_detected')) {
@@ -619,10 +598,6 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
         DriftSqlType.int,
         data['${effectivePrefix}duration_ms'],
       ),
-      artworkPath: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}artwork_path'],
-      ),
       bpmDetected: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}bpm_detected'],
@@ -667,7 +642,6 @@ class Song extends DataClass implements Insertable<Song> {
   final String? artist;
   final String? album;
   final int? durationMs;
-  final String? artworkPath;
 
   /// BPM automatically detected by the on-device DSP pipeline.
   final double? bpmDetected;
@@ -697,7 +671,6 @@ class Song extends DataClass implements Insertable<Song> {
     this.artist,
     this.album,
     this.durationMs,
-    this.artworkPath,
     this.bpmDetected,
     this.bpmManual,
     required this.dateAdded,
@@ -719,9 +692,6 @@ class Song extends DataClass implements Insertable<Song> {
     }
     if (!nullToAbsent || durationMs != null) {
       map['duration_ms'] = Variable<int>(durationMs);
-    }
-    if (!nullToAbsent || artworkPath != null) {
-      map['artwork_path'] = Variable<String>(artworkPath);
     }
     if (!nullToAbsent || bpmDetected != null) {
       map['bpm_detected'] = Variable<double>(bpmDetected);
@@ -752,9 +722,6 @@ class Song extends DataClass implements Insertable<Song> {
       durationMs: durationMs == null && nullToAbsent
           ? const Value.absent()
           : Value(durationMs),
-      artworkPath: artworkPath == null && nullToAbsent
-          ? const Value.absent()
-          : Value(artworkPath),
       bpmDetected: bpmDetected == null && nullToAbsent
           ? const Value.absent()
           : Value(bpmDetected),
@@ -782,7 +749,6 @@ class Song extends DataClass implements Insertable<Song> {
       artist: serializer.fromJson<String?>(json['artist']),
       album: serializer.fromJson<String?>(json['album']),
       durationMs: serializer.fromJson<int?>(json['durationMs']),
-      artworkPath: serializer.fromJson<String?>(json['artworkPath']),
       bpmDetected: serializer.fromJson<double?>(json['bpmDetected']),
       bpmManual: serializer.fromJson<double?>(json['bpmManual']),
       dateAdded: serializer.fromJson<DateTime>(json['dateAdded']),
@@ -801,7 +767,6 @@ class Song extends DataClass implements Insertable<Song> {
       'artist': serializer.toJson<String?>(artist),
       'album': serializer.toJson<String?>(album),
       'durationMs': serializer.toJson<int?>(durationMs),
-      'artworkPath': serializer.toJson<String?>(artworkPath),
       'bpmDetected': serializer.toJson<double?>(bpmDetected),
       'bpmManual': serializer.toJson<double?>(bpmManual),
       'dateAdded': serializer.toJson<DateTime>(dateAdded),
@@ -818,7 +783,6 @@ class Song extends DataClass implements Insertable<Song> {
     Value<String?> artist = const Value.absent(),
     Value<String?> album = const Value.absent(),
     Value<int?> durationMs = const Value.absent(),
-    Value<String?> artworkPath = const Value.absent(),
     Value<double?> bpmDetected = const Value.absent(),
     Value<double?> bpmManual = const Value.absent(),
     DateTime? dateAdded,
@@ -832,7 +796,6 @@ class Song extends DataClass implements Insertable<Song> {
     artist: artist.present ? artist.value : this.artist,
     album: album.present ? album.value : this.album,
     durationMs: durationMs.present ? durationMs.value : this.durationMs,
-    artworkPath: artworkPath.present ? artworkPath.value : this.artworkPath,
     bpmDetected: bpmDetected.present ? bpmDetected.value : this.bpmDetected,
     bpmManual: bpmManual.present ? bpmManual.value : this.bpmManual,
     dateAdded: dateAdded ?? this.dateAdded,
@@ -852,9 +815,6 @@ class Song extends DataClass implements Insertable<Song> {
       durationMs: data.durationMs.present
           ? data.durationMs.value
           : this.durationMs,
-      artworkPath: data.artworkPath.present
-          ? data.artworkPath.value
-          : this.artworkPath,
       bpmDetected: data.bpmDetected.present
           ? data.bpmDetected.value
           : this.bpmDetected,
@@ -879,7 +839,6 @@ class Song extends DataClass implements Insertable<Song> {
           ..write('artist: $artist, ')
           ..write('album: $album, ')
           ..write('durationMs: $durationMs, ')
-          ..write('artworkPath: $artworkPath, ')
           ..write('bpmDetected: $bpmDetected, ')
           ..write('bpmManual: $bpmManual, ')
           ..write('dateAdded: $dateAdded, ')
@@ -898,7 +857,6 @@ class Song extends DataClass implements Insertable<Song> {
     artist,
     album,
     durationMs,
-    artworkPath,
     bpmDetected,
     bpmManual,
     dateAdded,
@@ -916,7 +874,6 @@ class Song extends DataClass implements Insertable<Song> {
           other.artist == this.artist &&
           other.album == this.album &&
           other.durationMs == this.durationMs &&
-          other.artworkPath == this.artworkPath &&
           other.bpmDetected == this.bpmDetected &&
           other.bpmManual == this.bpmManual &&
           other.dateAdded == this.dateAdded &&
@@ -932,7 +889,6 @@ class SongsCompanion extends UpdateCompanion<Song> {
   final Value<String?> artist;
   final Value<String?> album;
   final Value<int?> durationMs;
-  final Value<String?> artworkPath;
   final Value<double?> bpmDetected;
   final Value<double?> bpmManual;
   final Value<DateTime> dateAdded;
@@ -947,7 +903,6 @@ class SongsCompanion extends UpdateCompanion<Song> {
     this.artist = const Value.absent(),
     this.album = const Value.absent(),
     this.durationMs = const Value.absent(),
-    this.artworkPath = const Value.absent(),
     this.bpmDetected = const Value.absent(),
     this.bpmManual = const Value.absent(),
     this.dateAdded = const Value.absent(),
@@ -963,7 +918,6 @@ class SongsCompanion extends UpdateCompanion<Song> {
     this.artist = const Value.absent(),
     this.album = const Value.absent(),
     this.durationMs = const Value.absent(),
-    this.artworkPath = const Value.absent(),
     this.bpmDetected = const Value.absent(),
     this.bpmManual = const Value.absent(),
     this.dateAdded = const Value.absent(),
@@ -981,7 +935,6 @@ class SongsCompanion extends UpdateCompanion<Song> {
     Expression<String>? artist,
     Expression<String>? album,
     Expression<int>? durationMs,
-    Expression<String>? artworkPath,
     Expression<double>? bpmDetected,
     Expression<double>? bpmManual,
     Expression<DateTime>? dateAdded,
@@ -997,7 +950,6 @@ class SongsCompanion extends UpdateCompanion<Song> {
       if (artist != null) 'artist': artist,
       if (album != null) 'album': album,
       if (durationMs != null) 'duration_ms': durationMs,
-      if (artworkPath != null) 'artwork_path': artworkPath,
       if (bpmDetected != null) 'bpm_detected': bpmDetected,
       if (bpmManual != null) 'bpm_manual': bpmManual,
       if (dateAdded != null) 'date_added': dateAdded,
@@ -1015,7 +967,6 @@ class SongsCompanion extends UpdateCompanion<Song> {
     Value<String?>? artist,
     Value<String?>? album,
     Value<int?>? durationMs,
-    Value<String?>? artworkPath,
     Value<double?>? bpmDetected,
     Value<double?>? bpmManual,
     Value<DateTime>? dateAdded,
@@ -1031,7 +982,6 @@ class SongsCompanion extends UpdateCompanion<Song> {
       artist: artist ?? this.artist,
       album: album ?? this.album,
       durationMs: durationMs ?? this.durationMs,
-      artworkPath: artworkPath ?? this.artworkPath,
       bpmDetected: bpmDetected ?? this.bpmDetected,
       bpmManual: bpmManual ?? this.bpmManual,
       dateAdded: dateAdded ?? this.dateAdded,
@@ -1062,9 +1012,6 @@ class SongsCompanion extends UpdateCompanion<Song> {
     }
     if (durationMs.present) {
       map['duration_ms'] = Variable<int>(durationMs.value);
-    }
-    if (artworkPath.present) {
-      map['artwork_path'] = Variable<String>(artworkPath.value);
     }
     if (bpmDetected.present) {
       map['bpm_detected'] = Variable<double>(bpmDetected.value);
@@ -1099,7 +1046,6 @@ class SongsCompanion extends UpdateCompanion<Song> {
           ..write('artist: $artist, ')
           ..write('album: $album, ')
           ..write('durationMs: $durationMs, ')
-          ..write('artworkPath: $artworkPath, ')
           ..write('bpmDetected: $bpmDetected, ')
           ..write('bpmManual: $bpmManual, ')
           ..write('dateAdded: $dateAdded, ')
@@ -3714,7 +3660,6 @@ typedef $$SongsTableCreateCompanionBuilder =
       Value<String?> artist,
       Value<String?> album,
       Value<int?> durationMs,
-      Value<String?> artworkPath,
       Value<double?> bpmDetected,
       Value<double?> bpmManual,
       Value<DateTime> dateAdded,
@@ -3731,7 +3676,6 @@ typedef $$SongsTableUpdateCompanionBuilder =
       Value<String?> artist,
       Value<String?> album,
       Value<int?> durationMs,
-      Value<String?> artworkPath,
       Value<double?> bpmDetected,
       Value<double?> bpmManual,
       Value<DateTime> dateAdded,
@@ -3854,11 +3798,6 @@ class $$SongsTableFilterComposer extends Composer<_$AppDatabase, $SongsTable> {
 
   ColumnFilters<int> get durationMs => $composableBuilder(
     column: $table.durationMs,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get artworkPath => $composableBuilder(
-    column: $table.artworkPath,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4025,11 +3964,6 @@ class $$SongsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get artworkPath => $composableBuilder(
-    column: $table.artworkPath,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<double> get bpmDetected => $composableBuilder(
     column: $table.bpmDetected,
     builder: (column) => ColumnOrderings(column),
@@ -4105,11 +4039,6 @@ class $$SongsTableAnnotationComposer
 
   GeneratedColumn<int> get durationMs => $composableBuilder(
     column: $table.durationMs,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get artworkPath => $composableBuilder(
-    column: $table.artworkPath,
     builder: (column) => column,
   );
 
@@ -4271,7 +4200,6 @@ class $$SongsTableTableManager
                 Value<String?> artist = const Value.absent(),
                 Value<String?> album = const Value.absent(),
                 Value<int?> durationMs = const Value.absent(),
-                Value<String?> artworkPath = const Value.absent(),
                 Value<double?> bpmDetected = const Value.absent(),
                 Value<double?> bpmManual = const Value.absent(),
                 Value<DateTime> dateAdded = const Value.absent(),
@@ -4286,7 +4214,6 @@ class $$SongsTableTableManager
                 artist: artist,
                 album: album,
                 durationMs: durationMs,
-                artworkPath: artworkPath,
                 bpmDetected: bpmDetected,
                 bpmManual: bpmManual,
                 dateAdded: dateAdded,
@@ -4303,7 +4230,6 @@ class $$SongsTableTableManager
                 Value<String?> artist = const Value.absent(),
                 Value<String?> album = const Value.absent(),
                 Value<int?> durationMs = const Value.absent(),
-                Value<String?> artworkPath = const Value.absent(),
                 Value<double?> bpmDetected = const Value.absent(),
                 Value<double?> bpmManual = const Value.absent(),
                 Value<DateTime> dateAdded = const Value.absent(),
@@ -4318,7 +4244,6 @@ class $$SongsTableTableManager
                 artist: artist,
                 album: album,
                 durationMs: durationMs,
-                artworkPath: artworkPath,
                 bpmDetected: bpmDetected,
                 bpmManual: bpmManual,
                 dateAdded: dateAdded,

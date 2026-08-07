@@ -113,7 +113,6 @@ class MusicLibraryScanner {
           artist: metadata.artist,
           album: metadata.album,
           durationMs: metadata.durationMs,
-          artworkPath: metadata.artworkPath,
         );
       }
     }
