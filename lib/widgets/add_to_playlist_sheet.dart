@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/constants.dart';
 import '../data/database/database.dart';
 import '../data/providers.dart';
 import '../features/playlists/playlist_list_screen.dart' show playlistsProvider;
+import 'text_input_dialog.dart';
 
 final _songPlaylistIdsProvider =
     StreamProvider.autoDispose.family<Set<String>, String>((ref, songId) {
@@ -88,31 +88,7 @@ class _AddToPlaylistSheet extends ConsumerWidget {
   }
 
   Future<void> _createAndAdd(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('New playlist'),
-        content: SizedBox(
-          width: kDialogContentWidth,
-          child: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(labelText: 'Name'),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Create'),
-          ),
-        ],
-      ),
-    );
+    final name = await showTextInputDialog(context, title: 'New playlist');
     if (name == null || name.isEmpty) return;
     final id = await ref.read(playlistRepositoryProvider).create(name);
     await ref.read(playlistRepositoryProvider).addSong(id, song.id);

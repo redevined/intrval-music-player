@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/format.dart';
 import '../data/providers.dart';
 import '../features/player/now_playing_controller.dart';
 import '../features/player/practice_session_controller.dart';
@@ -29,7 +30,7 @@ class MiniPlayer extends ConsumerWidget {
       return _MiniPlayerBar(
         leadingIcon: breaking ? Icons.self_improvement : Icons.timelapse,
         title: breaking
-            ? 'Break - ${_formatSeconds(session.breakSecondsRemaining)}'
+            ? 'Break - ${formatDuration(Duration(seconds: session.breakSecondsRemaining))}'
             : session.currentSong?.title ?? 'Loading...',
         subtitle: [
           session.practiceSet.name,
@@ -88,13 +89,6 @@ class MiniPlayer extends ConsumerWidget {
         ),
       ],
     );
-  }
-
-  static String _formatSeconds(int seconds) {
-    final clamped = seconds < 0 ? 0 : seconds;
-    final m = clamped ~/ 60;
-    final s = clamped % 60;
-    return '$m:${s.toString().padLeft(2, '0')}';
   }
 }
 

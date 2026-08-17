@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/format.dart';
 import '../data/database/database.dart';
 
 class SongTile extends StatelessWidget {
@@ -20,7 +21,7 @@ class SongTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final bpm = song.bpmManual ?? song.bpmDetected;
     final durationLabel = song.durationMs != null
-        ? _formatDuration(Duration(milliseconds: song.durationMs!))
+        ? formatDuration(Duration(milliseconds: song.durationMs!))
         : null;
     final hasArtist = song.artist?.isNotEmpty ?? false;
     final metaLabel = [
@@ -55,11 +56,5 @@ class SongTile extends StatelessWidget {
       ),
       trailing: trailing,
     );
-  }
-
-  String _formatDuration(Duration d) {
-    final minutes = d.inMinutes;
-    final seconds = d.inSeconds % 60;
-    return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
 }

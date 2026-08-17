@@ -47,14 +47,17 @@ final appSettingsRepositoryProvider = Provider<AppSettingsRepository>((ref) {
 });
 
 final setDefaultsProvider =
-    StateNotifierProvider<SetDefaultsController, SetDefaults>((ref) {
-      return SetDefaultsController(ref.watch(appSettingsRepositoryProvider));
+    StateNotifierProvider<SimpleSettingController<SetDefaults>, SetDefaults>((ref) {
+      final repo = ref.watch(appSettingsRepositoryProvider);
+      return SimpleSettingController(repo.saveSetDefaults, repo.setDefaults);
     });
 
 final musicRootFolderProvider =
-    StateNotifierProvider<MusicRootFolderController, String>((ref) {
-      return MusicRootFolderController(
-        ref.watch(appSettingsRepositoryProvider),
+    StateNotifierProvider<SimpleSettingController<String>, String>((ref) {
+      final repo = ref.watch(appSettingsRepositoryProvider);
+      return SimpleSettingController(
+        repo.saveMusicRootFolder,
+        repo.musicRootFolder,
       );
     });
 
@@ -62,16 +65,19 @@ final musicRootFolderProvider =
 /// setting, not something worth deciding per practice set - every session
 /// picks it up live from here rather than storing it per set.
 final breakCueModeProvider =
-    StateNotifierProvider<BreakCueModeController, String>((ref) {
-      return BreakCueModeController(ref.watch(appSettingsRepositoryProvider));
+    StateNotifierProvider<SimpleSettingController<String>, String>((ref) {
+      final repo = ref.watch(appSettingsRepositoryProvider);
+      return SimpleSettingController(repo.saveBreakCueMode, repo.breakCueMode);
     });
 
 /// Volume for whichever break cue is currently selected (ambient track or
 /// beep) - same reasoning as [breakCueModeProvider].
 final breakCueVolumeProvider =
-    StateNotifierProvider<BreakCueVolumeController, int>((ref) {
-      return BreakCueVolumeController(
-        ref.watch(appSettingsRepositoryProvider),
+    StateNotifierProvider<SimpleSettingController<int>, int>((ref) {
+      final repo = ref.watch(appSettingsRepositoryProvider);
+      return SimpleSettingController(
+        repo.saveBreakCueVolumePercent,
+        repo.breakCueVolumePercent,
       );
     });
 
@@ -79,32 +85,37 @@ final breakCueVolumeProvider =
 /// since the device not being loud enough is a property of the room/
 /// speakers rather than of whatever happens to be playing.
 final volumeBoostDbProvider =
-    StateNotifierProvider<VolumeBoostController, double>((ref) {
-      return VolumeBoostController(ref.watch(appSettingsRepositoryProvider));
+    StateNotifierProvider<SimpleSettingController<double>, double>((ref) {
+      final repo = ref.watch(appSettingsRepositoryProvider);
+      return SimpleSettingController(repo.saveVolumeBoostDb, repo.volumeBoostDb);
     });
 
 /// Whether songs are normalized to a consistent target loudness - a single
 /// global setting, same reasoning as [volumeBoostDbProvider].
 final audioNormalizationEnabledProvider =
-    StateNotifierProvider<AudioNormalizationController, bool>((ref) {
-      return AudioNormalizationController(
-        ref.watch(appSettingsRepositoryProvider),
+    StateNotifierProvider<SimpleSettingController<bool>, bool>((ref) {
+      final repo = ref.watch(appSettingsRepositoryProvider);
+      return SimpleSettingController(
+        repo.saveAudioNormalizationEnabled,
+        repo.audioNormalizationEnabled,
       );
     });
 
 /// Same reasoning as [breakCueModeProvider]: a single global behavior rather
 /// than something worth deciding per practice set.
 final fadeOutSecondsProvider =
-    StateNotifierProvider<FadeOutSecondsController, int>((ref) {
-      return FadeOutSecondsController(ref.watch(appSettingsRepositoryProvider));
+    StateNotifierProvider<SimpleSettingController<int>, int>((ref) {
+      final repo = ref.watch(appSettingsRepositoryProvider);
+      return SimpleSettingController(repo.saveFadeOutSeconds, repo.fadeOutSeconds);
     });
 
 /// The tempo-stretch DSP algorithm (see [TempoAlgorithm]) - a single global
 /// setting, same reasoning as [breakCueModeProvider]. Defaults to Rubber
 /// Band.
 final tempoAlgorithmProvider =
-    StateNotifierProvider<TempoAlgorithmController, TempoAlgorithm>((ref) {
-      return TempoAlgorithmController(ref.watch(appSettingsRepositoryProvider));
+    StateNotifierProvider<SimpleSettingController<TempoAlgorithm>, TempoAlgorithm>((ref) {
+      final repo = ref.watch(appSettingsRepositoryProvider);
+      return SimpleSettingController(repo.saveTempoAlgorithm, repo.tempoAlgorithm);
     });
 
 /// The app-icon theme-cycling easter egg's current choice - see

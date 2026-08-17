@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
 import '../../widgets/sort_app_bar_actions.dart';
 import '../../widgets/tab_heading.dart';
+import '../../widgets/text_input_dialog.dart';
 import '../player/standard_player_screen.dart';
 import 'playlist_detail_screen.dart';
 
@@ -206,31 +206,7 @@ class PlaylistListScreen extends ConsumerWidget {
   }
 
   Future<void> _createPlaylist(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('New playlist'),
-        content: SizedBox(
-          width: kDialogContentWidth,
-          child: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(labelText: 'Name'),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Create'),
-          ),
-        ],
-      ),
-    );
+    final name = await showTextInputDialog(context, title: 'New playlist');
     if (name != null && name.isNotEmpty) {
       await ref.read(playlistRepositoryProvider).create(name);
     }
@@ -241,30 +217,11 @@ class PlaylistListScreen extends ConsumerWidget {
     WidgetRef ref,
     Playlist playlist,
   ) async {
-    final controller = TextEditingController(text: playlist.name);
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Rename playlist'),
-        content: SizedBox(
-          width: kDialogContentWidth,
-          child: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(labelText: 'Name'),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+    final name = await showTextInputDialog(
+      context,
+      title: 'Rename playlist',
+      initialValue: playlist.name,
+      confirmLabel: 'Save',
     );
     if (name != null && name.isNotEmpty) {
       await ref.read(playlistRepositoryProvider).rename(playlist.id, name);

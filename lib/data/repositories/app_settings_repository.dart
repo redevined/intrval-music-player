@@ -153,83 +153,21 @@ class AppSettingsRepository {
       _prefs.setString(_kTempoAlgorithm, algorithm.name);
 }
 
-class SetDefaultsController extends StateNotifier<SetDefaults> {
-  SetDefaultsController(this._repo) : super(_repo.setDefaults);
-  final AppSettingsRepository _repo;
+/// Backs every plain single-value global setting (new-set defaults, music
+/// root folder, break cue mode/volume, volume boost, audio normalization,
+/// fade-out seconds, tempo algorithm) - each previously had its own
+/// bespoke `StateNotifier` subclass that did nothing but hold [_write] and
+/// forward to it, so they're all just this one generic class parameterized
+/// with the matching [AppSettingsRepository] getter/setter pair. Settings
+/// with extra behavior beyond "read initial value, write updates" (e.g.
+/// [ThemeSeedController.cycle]) still get their own subclass.
+class SimpleSettingController<T> extends StateNotifier<T> {
+  SimpleSettingController(this._write, T initial) : super(initial);
+  final Future<void> Function(T value) _write;
 
-  Future<void> update(SetDefaults defaults) async {
-    state = defaults;
-    await _repo.saveSetDefaults(defaults);
-  }
-}
-
-class MusicRootFolderController extends StateNotifier<String> {
-  MusicRootFolderController(this._repo) : super(_repo.musicRootFolder);
-  final AppSettingsRepository _repo;
-
-  Future<void> update(String path) async {
-    state = path;
-    await _repo.saveMusicRootFolder(path);
-  }
-}
-
-class BreakCueModeController extends StateNotifier<String> {
-  BreakCueModeController(this._repo) : super(_repo.breakCueMode);
-  final AppSettingsRepository _repo;
-
-  Future<void> update(String mode) async {
-    state = mode;
-    await _repo.saveBreakCueMode(mode);
-  }
-}
-
-class BreakCueVolumeController extends StateNotifier<int> {
-  BreakCueVolumeController(this._repo) : super(_repo.breakCueVolumePercent);
-  final AppSettingsRepository _repo;
-
-  Future<void> update(int percent) async {
-    state = percent;
-    await _repo.saveBreakCueVolumePercent(percent);
-  }
-}
-
-class VolumeBoostController extends StateNotifier<double> {
-  VolumeBoostController(this._repo) : super(_repo.volumeBoostDb);
-  final AppSettingsRepository _repo;
-
-  Future<void> update(double db) async {
-    state = db;
-    await _repo.saveVolumeBoostDb(db);
-  }
-}
-
-class AudioNormalizationController extends StateNotifier<bool> {
-  AudioNormalizationController(this._repo) : super(_repo.audioNormalizationEnabled);
-  final AppSettingsRepository _repo;
-
-  Future<void> update(bool enabled) async {
-    state = enabled;
-    await _repo.saveAudioNormalizationEnabled(enabled);
-  }
-}
-
-class FadeOutSecondsController extends StateNotifier<int> {
-  FadeOutSecondsController(this._repo) : super(_repo.fadeOutSeconds);
-  final AppSettingsRepository _repo;
-
-  Future<void> update(int seconds) async {
-    state = seconds;
-    await _repo.saveFadeOutSeconds(seconds);
-  }
-}
-
-class TempoAlgorithmController extends StateNotifier<TempoAlgorithm> {
-  TempoAlgorithmController(this._repo) : super(_repo.tempoAlgorithm);
-  final AppSettingsRepository _repo;
-
-  Future<void> update(TempoAlgorithm algorithm) async {
-    state = algorithm;
-    await _repo.saveTempoAlgorithm(algorithm);
+  Future<void> update(T value) async {
+    state = value;
+    await _write(value);
   }
 }
 

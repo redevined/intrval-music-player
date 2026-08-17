@@ -97,8 +97,7 @@ class SetBuilderScreen extends ConsumerWidget {
                       .read(practiceSetRepositoryProvider)
                       .removeEntry(entry.id),
                 ),
-                onTap: () =>
-                    _editEntry(context, ref, entry, playlists, folders),
+                onTap: () => _editEntry(context, ref, entry),
               );
             },
             onReorderItem: (oldIndex, newIndex) {
@@ -161,8 +160,6 @@ class SetBuilderScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     SetEntry entry,
-    List<Playlist> playlists,
-    List<BookmarkedFolder> folders,
   ) async {
     final labelController = TextEditingController(text: entry.label);
     var tempoPercent = entry.tempoPercent;

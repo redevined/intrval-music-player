@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/format.dart';
+
 /// Slim scrub bar with the elapsed/remaining readout underneath it.
 ///
 /// While the user drags, the thumb follows the finger instead of the incoming
@@ -49,10 +51,10 @@ class _SeekBarState extends State<SeekBar> {
     final valueMs = _dragMilliseconds ?? positionMs;
     final shown = Duration(milliseconds: valueMs.round());
     final trailing = widget.remainingAsCountdown
-        ? '-${_format(widget.duration - shown)}'
-        : _format(widget.duration);
+        ? '-${formatDuration(widget.duration - shown)}'
+        : formatDuration(widget.duration);
 
-    final startLabel = _format(shown);
+    final startLabel = formatDuration(shown);
     final labelStyle = theme.textTheme.labelMedium?.copyWith(
       color: theme.colorScheme.onSurfaceVariant,
       fontFeatures: const [FontFeature.tabularFigures()],
@@ -110,7 +112,7 @@ class _SeekBarState extends State<SeekBar> {
             if (markerFraction == null) return row;
 
             final trackWidth = constraints.maxWidth;
-            final markerText = _format(stopAt!);
+            final markerText = formatDuration(stopAt!);
             final markerWidth = _measure(markerText, markerLabelStyle);
             // Keep the marker label clear of the start/end labels sharing
             // the row with it - if there isn't room for it between the
@@ -142,13 +144,6 @@ class _SeekBarState extends State<SeekBar> {
         ),
       ],
     );
-  }
-
-  static String _format(Duration d) {
-    final clamped = d.isNegative ? Duration.zero : d;
-    final m = clamped.inMinutes;
-    final s = clamped.inSeconds % 60;
-    return '$m:${s.toString().padLeft(2, '0')}';
   }
 
   static double _measure(String text, TextStyle? style) {

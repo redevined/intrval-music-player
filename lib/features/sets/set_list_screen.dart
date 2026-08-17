@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
 import '../../widgets/sort_app_bar_actions.dart';
 import '../../widgets/tab_heading.dart';
+import '../../widgets/text_input_dialog.dart';
 import '../player/practice_session_screen.dart';
 import 'set_builder_screen.dart';
 
@@ -195,31 +195,7 @@ class SetListScreen extends ConsumerWidget {
   }
 
   Future<void> _createSet(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('New practice set'),
-        content: SizedBox(
-          width: kDialogContentWidth,
-          child: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(labelText: 'Name'),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Create'),
-          ),
-        ],
-      ),
-    );
+    final name = await showTextInputDialog(context, title: 'New practice set');
     if (name != null && name.isNotEmpty) {
       final defaults = ref.read(setDefaultsProvider);
       final id = await ref
@@ -243,30 +219,11 @@ class SetListScreen extends ConsumerWidget {
     WidgetRef ref,
     PracticeSet set,
   ) async {
-    final controller = TextEditingController(text: set.name);
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Rename set'),
-        content: SizedBox(
-          width: kDialogContentWidth,
-          child: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(labelText: 'Name'),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+    final name = await showTextInputDialog(
+      context,
+      title: 'Rename set',
+      initialValue: set.name,
+      confirmLabel: 'Save',
     );
     if (name != null && name.isNotEmpty) {
       await ref.read(practiceSetRepositoryProvider).rename(set.id, name);
