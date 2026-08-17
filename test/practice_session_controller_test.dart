@@ -401,6 +401,67 @@ void main() {
     expect(container.read(nowPlayingProvider), isNotNull);
   });
 
+  test('a non-repeating set completes after its last entry, same as before',
+      () async {
+    final set = await harness.createSetWithEntries(['Waltz'], repeatEnabled: false);
+    await controller().start(set);
+
+    controller().skip();
+    await pumpEventQueue();
+
+    expect(session()!.phase, SessionPhase.complete);
+  });
+
+  test('a repeating set gets a break after its last entry, then loops back to the first instead of completing',
+      () async {
+    final set = await harness.createSetWithEntries(
+      ['Waltz', 'Tango'],
+      repeatEnabled: true,
+      breakSeconds: 5,
+    );
+    await controller().start(set);
+
+    controller().skip(); // Waltz -> Tango
+    await pumpEventQueue();
+    expect(session()!.entryIndex, 1);
+
+    // Reaching the end naturally (not via skip, which bypasses the break
+    // entirely) is what exercises _startBreak's loop-aware break decision.
+    handler.onTrackComplete!();
+    await pumpEventQueue();
+
+    var s = session()!;
+    expect(s.phase, SessionPhase.breaking);
+    expect(s.breakSecondsRemaining, 5);
+    expect(s.isActive, isTrue);
+
+    await Future<void>.delayed(const Duration(milliseconds: 5100));
+
+    s = session()!;
+    expect(s.entryIndex, 0);
+    expect(s.phase, SessionPhase.playing);
+    expect(s.isActive, isTrue);
+  });
+
+  test('repeat draws every song from a source before repeating any, and never repeats one back-to-back',
+      () async {
+    final set = await harness.createSetWithEntries(['Waltz'], repeatEnabled: true);
+    await controller().start(set);
+
+    final ids = [session()!.currentSong!.id];
+    for (var i = 0; i < 9; i++) {
+      controller().skip();
+      await pumpEventQueue();
+      ids.add(session()!.currentSong!.id);
+    }
+
+    for (var i = 0; i < ids.length - 1; i++) {
+      expect(ids[i], isNot(ids[i + 1]), reason: 'repeated back-to-back at index $i');
+    }
+    // Both songs in the 2-song pool actually get used, not just one of them.
+    expect(ids.toSet(), hasLength(2));
+  });
+
   test('entry tempo is applied and can be overridden live', () async {
     final set = await harness.createSetWithEntries(['Waltz'], tempoPercent: 85);
     await controller().start(set);
@@ -427,6 +488,7 @@ class PracticeSetRepositoryHarness {
     int? tempoPercent,
     int? playDurationSeconds,
     bool emptyFirstEntry = false,
+    bool? repeatEnabled,
   }) async {
     final songs = _container.read(songRepositoryProvider);
     final playlists = _container.read(playlistRepositoryProvider);
@@ -440,6 +502,12 @@ class PracticeSetRepositoryHarness {
     final emptyPlaylistId = await playlists.create('Empty pool');
 
     final setId = await sets.create('Practice');
+    if (repeatEnabled != null) {
+      await sets.update(
+        setId,
+        PracticeSetsCompanion(repeatEnabled: Value(repeatEnabled)),
+      );
+    }
     for (var i = 0; i < entryLabels.length; i++) {
       final useEmpty = emptyFirstEntry && i == 0;
       final entryId = await sets.addEntry(

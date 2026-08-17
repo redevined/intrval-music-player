@@ -110,9 +110,4 @@ class PracticeSetRepository {
       }
     });
   }
-
-  Future<void> setLastPlayedSong(String entryId, String songId) {
-    return (_db.update(_db.setEntries)..where((e) => e.id.equals(entryId)))
-        .write(SetEntriesCompanion(lastPlayedSongId: Value(songId)));
-  }
 }

@@ -28,7 +28,7 @@ class SetBuilderScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Watch the live row instead of the (possibly stale) constructor value,
-    // so edits made via "Set defaults" are reflected immediately - both in
+    // so edits made via "Set options" are reflected immediately - both in
     // this screen and in any practice session started from it.
     final currentSet =
         ref.watch(_practiceSetByIdProvider(practiceSet.id)).valueOrNull ??
@@ -43,8 +43,8 @@ class SetBuilderScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.tune),
-            tooltip: 'Set defaults',
-            onPressed: () => _editDefaults(context, ref, currentSet),
+            tooltip: 'Set options',
+            onPressed: () => _editSetOptions(context, ref, currentSet),
           ),
         ],
       ),
@@ -262,7 +262,7 @@ class SetBuilderScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _editDefaults(
+  Future<void> _editSetOptions(
     BuildContext context,
     WidgetRef ref,
     PracticeSet currentSet,
@@ -270,12 +270,13 @@ class SetBuilderScreen extends ConsumerWidget {
     var tempo = currentSet.defaultTempoPercent;
     var play = currentSet.defaultPlayDurationSeconds;
     var brk = currentSet.defaultBreakSeconds;
+    var repeat = currentSet.repeatEnabled;
 
     await showDialog<void>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Set defaults'),
+          title: const Text('Set options'),
           content: SizedBox(
             width: kDialogContentWidth,
             child: SingleChildScrollView(
@@ -313,6 +314,16 @@ class SetBuilderScreen extends ConsumerWidget {
                     divisions: 24,
                     onChanged: (v) => setState(() => brk = v.round()),
                   ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Repeat'),
+                    subtitle: const Text(
+                      'Loop back to the first entry after the last one, '
+                      'indefinitely',
+                    ),
+                    value: repeat,
+                    onChanged: (v) => setState(() => repeat = v),
+                  ),
                 ],
               ),
             ),
@@ -324,6 +335,7 @@ class SetBuilderScreen extends ConsumerWidget {
                 tempo = appWideDefaults.tempoPercent;
                 play = appWideDefaults.playDurationSeconds;
                 brk = appWideDefaults.breakSeconds;
+                repeat = false;
               }),
               child: const Text('Reset'),
             ),
@@ -341,6 +353,7 @@ class SetBuilderScreen extends ConsumerWidget {
                         defaultTempoPercent: Value(tempo),
                         defaultPlayDurationSeconds: Value(play),
                         defaultBreakSeconds: Value(brk),
+                        repeatEnabled: Value(repeat),
                       ),
                     );
                 if (context.mounted) Navigator.of(context).pop();

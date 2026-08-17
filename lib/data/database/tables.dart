@@ -116,6 +116,12 @@ class PracticeSets extends Table {
   TextColumn get defaultAmbientSongId =>
       text().nullable().references(Songs, #id)();
 
+  /// When true, a session loops back to the first entry after the last one
+  /// finishes (indefinitely) instead of completing. See
+  /// [PracticeSessionController._advance].
+  BoolColumn get repeatEnabled =>
+      boolean().withDefault(const Constant(false))();
+
   DateTimeColumn get dateCreated =>
       dateTime().withDefault(currentDateAndTime)();
 

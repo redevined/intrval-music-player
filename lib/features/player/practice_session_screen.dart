@@ -145,7 +145,11 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       ),
       contextHeader: entry == null
           ? null
-          : _EntryHeader(label: entry.label, position: session.positionLabel),
+          : _EntryHeader(
+              label: entry.label,
+              position: session.positionLabel,
+              repeatEnabled: session.practiceSet.repeatEnabled,
+            ),
       title: breaking
           ? 'Break'
           : loading
@@ -237,10 +241,15 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
 /// The current entry's name plus its position in the set - the core piece of
 /// information a practice player needs that a normal player doesn't.
 class _EntryHeader extends StatelessWidget {
-  const _EntryHeader({required this.label, required this.position});
+  const _EntryHeader({
+    required this.label,
+    required this.position,
+    required this.repeatEnabled,
+  });
 
   final String label;
   final String position;
+  final bool repeatEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -276,6 +285,14 @@ class _EntryHeader extends StatelessWidget {
             fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
+        if (repeatEnabled) ...[
+          const SizedBox(width: 6),
+          Icon(
+            Icons.repeat_rounded,
+            size: 16,
+            color: colors.onSurfaceVariant,
+          ),
+        ],
       ],
     );
   }

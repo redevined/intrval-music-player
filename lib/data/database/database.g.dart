@@ -1698,6 +1698,21 @@ class $PracticeSetsTable extends PracticeSets
           'REFERENCES songs (id)',
         ),
       );
+  static const VerificationMeta _repeatEnabledMeta = const VerificationMeta(
+    'repeatEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> repeatEnabled = GeneratedColumn<bool>(
+    'repeat_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("repeat_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _dateCreatedMeta = const VerificationMeta(
     'dateCreated',
   );
@@ -1721,6 +1736,7 @@ class $PracticeSetsTable extends PracticeSets
     defaultBreakCueMode,
     defaultBeepLeadSeconds,
     defaultAmbientSongId,
+    repeatEnabled,
     dateCreated,
   ];
   @override
@@ -1811,6 +1827,15 @@ class $PracticeSetsTable extends PracticeSets
         ),
       );
     }
+    if (data.containsKey('repeat_enabled')) {
+      context.handle(
+        _repeatEnabledMeta,
+        repeatEnabled.isAcceptableOrUnknown(
+          data['repeat_enabled']!,
+          _repeatEnabledMeta,
+        ),
+      );
+    }
     if (data.containsKey('date_created')) {
       context.handle(
         _dateCreatedMeta,
@@ -1865,6 +1890,10 @@ class $PracticeSetsTable extends PracticeSets
         DriftSqlType.string,
         data['${effectivePrefix}default_ambient_song_id'],
       ),
+      repeatEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}repeat_enabled'],
+      )!,
       dateCreated: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}date_created'],
@@ -1890,6 +1919,11 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
   final String defaultBreakCueMode;
   final int defaultBeepLeadSeconds;
   final String? defaultAmbientSongId;
+
+  /// When true, a session loops back to the first entry after the last one
+  /// finishes (indefinitely) instead of completing. See
+  /// [PracticeSessionController._advance].
+  final bool repeatEnabled;
   final DateTime dateCreated;
   const PracticeSet({
     required this.id,
@@ -1901,6 +1935,7 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
     required this.defaultBreakCueMode,
     required this.defaultBeepLeadSeconds,
     this.defaultAmbientSongId,
+    required this.repeatEnabled,
     required this.dateCreated,
   });
   @override
@@ -1919,6 +1954,7 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
     if (!nullToAbsent || defaultAmbientSongId != null) {
       map['default_ambient_song_id'] = Variable<String>(defaultAmbientSongId);
     }
+    map['repeat_enabled'] = Variable<bool>(repeatEnabled);
     map['date_created'] = Variable<DateTime>(dateCreated);
     return map;
   }
@@ -1936,6 +1972,7 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
       defaultAmbientSongId: defaultAmbientSongId == null && nullToAbsent
           ? const Value.absent()
           : Value(defaultAmbientSongId),
+      repeatEnabled: Value(repeatEnabled),
       dateCreated: Value(dateCreated),
     );
   }
@@ -1969,6 +2006,7 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
       defaultAmbientSongId: serializer.fromJson<String?>(
         json['defaultAmbientSongId'],
       ),
+      repeatEnabled: serializer.fromJson<bool>(json['repeatEnabled']),
       dateCreated: serializer.fromJson<DateTime>(json['dateCreated']),
     );
   }
@@ -1987,6 +2025,7 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
       'defaultBreakCueMode': serializer.toJson<String>(defaultBreakCueMode),
       'defaultBeepLeadSeconds': serializer.toJson<int>(defaultBeepLeadSeconds),
       'defaultAmbientSongId': serializer.toJson<String?>(defaultAmbientSongId),
+      'repeatEnabled': serializer.toJson<bool>(repeatEnabled),
       'dateCreated': serializer.toJson<DateTime>(dateCreated),
     };
   }
@@ -2001,6 +2040,7 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
     String? defaultBreakCueMode,
     int? defaultBeepLeadSeconds,
     Value<String?> defaultAmbientSongId = const Value.absent(),
+    bool? repeatEnabled,
     DateTime? dateCreated,
   }) => PracticeSet(
     id: id ?? this.id,
@@ -2016,6 +2056,7 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
     defaultAmbientSongId: defaultAmbientSongId.present
         ? defaultAmbientSongId.value
         : this.defaultAmbientSongId,
+    repeatEnabled: repeatEnabled ?? this.repeatEnabled,
     dateCreated: dateCreated ?? this.dateCreated,
   );
   PracticeSet copyWithCompanion(PracticeSetsCompanion data) {
@@ -2043,6 +2084,9 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
       defaultAmbientSongId: data.defaultAmbientSongId.present
           ? data.defaultAmbientSongId.value
           : this.defaultAmbientSongId,
+      repeatEnabled: data.repeatEnabled.present
+          ? data.repeatEnabled.value
+          : this.repeatEnabled,
       dateCreated: data.dateCreated.present
           ? data.dateCreated.value
           : this.dateCreated,
@@ -2061,6 +2105,7 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
           ..write('defaultBreakCueMode: $defaultBreakCueMode, ')
           ..write('defaultBeepLeadSeconds: $defaultBeepLeadSeconds, ')
           ..write('defaultAmbientSongId: $defaultAmbientSongId, ')
+          ..write('repeatEnabled: $repeatEnabled, ')
           ..write('dateCreated: $dateCreated')
           ..write(')'))
         .toString();
@@ -2077,6 +2122,7 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
     defaultBreakCueMode,
     defaultBeepLeadSeconds,
     defaultAmbientSongId,
+    repeatEnabled,
     dateCreated,
   );
   @override
@@ -2092,6 +2138,7 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
           other.defaultBreakCueMode == this.defaultBreakCueMode &&
           other.defaultBeepLeadSeconds == this.defaultBeepLeadSeconds &&
           other.defaultAmbientSongId == this.defaultAmbientSongId &&
+          other.repeatEnabled == this.repeatEnabled &&
           other.dateCreated == this.dateCreated);
 }
 
@@ -2105,6 +2152,7 @@ class PracticeSetsCompanion extends UpdateCompanion<PracticeSet> {
   final Value<String> defaultBreakCueMode;
   final Value<int> defaultBeepLeadSeconds;
   final Value<String?> defaultAmbientSongId;
+  final Value<bool> repeatEnabled;
   final Value<DateTime> dateCreated;
   final Value<int> rowid;
   const PracticeSetsCompanion({
@@ -2117,6 +2165,7 @@ class PracticeSetsCompanion extends UpdateCompanion<PracticeSet> {
     this.defaultBreakCueMode = const Value.absent(),
     this.defaultBeepLeadSeconds = const Value.absent(),
     this.defaultAmbientSongId = const Value.absent(),
+    this.repeatEnabled = const Value.absent(),
     this.dateCreated = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -2130,6 +2179,7 @@ class PracticeSetsCompanion extends UpdateCompanion<PracticeSet> {
     this.defaultBreakCueMode = const Value.absent(),
     this.defaultBeepLeadSeconds = const Value.absent(),
     this.defaultAmbientSongId = const Value.absent(),
+    this.repeatEnabled = const Value.absent(),
     this.dateCreated = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -2144,6 +2194,7 @@ class PracticeSetsCompanion extends UpdateCompanion<PracticeSet> {
     Expression<String>? defaultBreakCueMode,
     Expression<int>? defaultBeepLeadSeconds,
     Expression<String>? defaultAmbientSongId,
+    Expression<bool>? repeatEnabled,
     Expression<DateTime>? dateCreated,
     Expression<int>? rowid,
   }) {
@@ -2164,6 +2215,7 @@ class PracticeSetsCompanion extends UpdateCompanion<PracticeSet> {
         'default_beep_lead_seconds': defaultBeepLeadSeconds,
       if (defaultAmbientSongId != null)
         'default_ambient_song_id': defaultAmbientSongId,
+      if (repeatEnabled != null) 'repeat_enabled': repeatEnabled,
       if (dateCreated != null) 'date_created': dateCreated,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2179,6 +2231,7 @@ class PracticeSetsCompanion extends UpdateCompanion<PracticeSet> {
     Value<String>? defaultBreakCueMode,
     Value<int>? defaultBeepLeadSeconds,
     Value<String?>? defaultAmbientSongId,
+    Value<bool>? repeatEnabled,
     Value<DateTime>? dateCreated,
     Value<int>? rowid,
   }) {
@@ -2195,6 +2248,7 @@ class PracticeSetsCompanion extends UpdateCompanion<PracticeSet> {
       defaultBeepLeadSeconds:
           defaultBeepLeadSeconds ?? this.defaultBeepLeadSeconds,
       defaultAmbientSongId: defaultAmbientSongId ?? this.defaultAmbientSongId,
+      repeatEnabled: repeatEnabled ?? this.repeatEnabled,
       dateCreated: dateCreated ?? this.dateCreated,
       rowid: rowid ?? this.rowid,
     );
@@ -2240,6 +2294,9 @@ class PracticeSetsCompanion extends UpdateCompanion<PracticeSet> {
         defaultAmbientSongId.value,
       );
     }
+    if (repeatEnabled.present) {
+      map['repeat_enabled'] = Variable<bool>(repeatEnabled.value);
+    }
     if (dateCreated.present) {
       map['date_created'] = Variable<DateTime>(dateCreated.value);
     }
@@ -2261,6 +2318,7 @@ class PracticeSetsCompanion extends UpdateCompanion<PracticeSet> {
           ..write('defaultBreakCueMode: $defaultBreakCueMode, ')
           ..write('defaultBeepLeadSeconds: $defaultBeepLeadSeconds, ')
           ..write('defaultAmbientSongId: $defaultAmbientSongId, ')
+          ..write('repeatEnabled: $repeatEnabled, ')
           ..write('dateCreated: $dateCreated, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -5132,6 +5190,7 @@ typedef $$PracticeSetsTableCreateCompanionBuilder =
       Value<String> defaultBreakCueMode,
       Value<int> defaultBeepLeadSeconds,
       Value<String?> defaultAmbientSongId,
+      Value<bool> repeatEnabled,
       Value<DateTime> dateCreated,
       Value<int> rowid,
     });
@@ -5146,6 +5205,7 @@ typedef $$PracticeSetsTableUpdateCompanionBuilder =
       Value<String> defaultBreakCueMode,
       Value<int> defaultBeepLeadSeconds,
       Value<String?> defaultAmbientSongId,
+      Value<bool> repeatEnabled,
       Value<DateTime> dateCreated,
       Value<int> rowid,
     });
@@ -5238,6 +5298,11 @@ class $$PracticeSetsTableFilterComposer
 
   ColumnFilters<int> get defaultBeepLeadSeconds => $composableBuilder(
     column: $table.defaultBeepLeadSeconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get repeatEnabled => $composableBuilder(
+    column: $table.repeatEnabled,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5344,6 +5409,11 @@ class $$PracticeSetsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get repeatEnabled => $composableBuilder(
+    column: $table.repeatEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get dateCreated => $composableBuilder(
     column: $table.dateCreated,
     builder: (column) => ColumnOrderings(column),
@@ -5415,6 +5485,11 @@ class $$PracticeSetsTableAnnotationComposer
 
   GeneratedColumn<int> get defaultBeepLeadSeconds => $composableBuilder(
     column: $table.defaultBeepLeadSeconds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get repeatEnabled => $composableBuilder(
+    column: $table.repeatEnabled,
     builder: (column) => column,
   );
 
@@ -5512,6 +5587,7 @@ class $$PracticeSetsTableTableManager
                 Value<String> defaultBreakCueMode = const Value.absent(),
                 Value<int> defaultBeepLeadSeconds = const Value.absent(),
                 Value<String?> defaultAmbientSongId = const Value.absent(),
+                Value<bool> repeatEnabled = const Value.absent(),
                 Value<DateTime> dateCreated = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PracticeSetsCompanion(
@@ -5524,6 +5600,7 @@ class $$PracticeSetsTableTableManager
                 defaultBreakCueMode: defaultBreakCueMode,
                 defaultBeepLeadSeconds: defaultBeepLeadSeconds,
                 defaultAmbientSongId: defaultAmbientSongId,
+                repeatEnabled: repeatEnabled,
                 dateCreated: dateCreated,
                 rowid: rowid,
               ),
@@ -5538,6 +5615,7 @@ class $$PracticeSetsTableTableManager
                 Value<String> defaultBreakCueMode = const Value.absent(),
                 Value<int> defaultBeepLeadSeconds = const Value.absent(),
                 Value<String?> defaultAmbientSongId = const Value.absent(),
+                Value<bool> repeatEnabled = const Value.absent(),
                 Value<DateTime> dateCreated = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PracticeSetsCompanion.insert(
@@ -5550,6 +5628,7 @@ class $$PracticeSetsTableTableManager
                 defaultBreakCueMode: defaultBreakCueMode,
                 defaultBeepLeadSeconds: defaultBeepLeadSeconds,
                 defaultAmbientSongId: defaultAmbientSongId,
+                repeatEnabled: repeatEnabled,
                 dateCreated: dateCreated,
                 rowid: rowid,
               ),

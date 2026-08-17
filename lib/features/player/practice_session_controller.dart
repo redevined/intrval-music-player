@@ -134,6 +134,19 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
   Timer? _playTicker;
   Timer? _breakTicker;
 
+  /// Per-source (playlist/folder id) draw-without-replacement pools: songs
+  /// already played from that source since it was last exhausted, so
+  /// picking never repeats one until every song from it has come up. Purely
+  /// in-memory and scoped to the running session - cleared in [start], so a
+  /// stopped-and-restarted session forgets what it already played, same as
+  /// a shuffled queue starting over. See [_pickSong].
+  final Map<String, Set<String>> _usedSongIds = {};
+
+  /// The last song actually played per source, kept alongside
+  /// [_usedSongIds] so that the moment a pool is exhausted and reshuffled,
+  /// the immediately-following pick still doesn't repeat it back-to-back.
+  final Map<String, String> _lastPlayedBySource = {};
+
   /// Guards against a stale timer/callback from a previous entry (or a
   /// previous session entirely) mutating state after we've moved on.
   int _generation = 0;
@@ -152,6 +165,8 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
     unawaited(ensureNotificationPermission());
     _playTicker?.cancel();
     _breakTicker?.cancel();
+    _usedSongIds.clear();
+    _lastPlayedBySource.clear();
 
     // The mini-player would otherwise show a stale ad-hoc queue and fight
     // over the same handler.
@@ -219,11 +234,8 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
       return;
     }
 
-    final song = _pickSong(candidates, resolved.entry.lastPlayedSongId);
-    await _ref
-        .read(practiceSetRepositoryProvider)
-        .setLastPlayedSong(resolved.entry.id, song.id);
-    if (generation != _generation) return;
+    final sourceKey = resolved.entry.playlistId ?? resolved.entry.folderId!;
+    final song = _pickSong(candidates, sourceKey);
 
     final handler = _ref.read(audioHandlerProvider);
     try {
@@ -291,12 +303,30 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
     });
   }
 
-  Song _pickSong(List<Song> candidates, String? lastPlayedSongId) {
+  /// Draws a song from [candidates] without replacement, tracked per
+  /// [sourceKey] (a playlist/folder id - shared by every entry pulling from
+  /// the same source, so e.g. two entries both using playlist "JV" draw
+  /// from the same pool rather than each avoiding repeats independently).
+  /// Once every candidate has come up, the pool reshuffles - but the song
+  /// that had just played from this source is still excluded from that
+  /// very next pick, so a reshuffle never immediately repeats it. See
+  /// [_usedSongIds]/[_lastPlayedBySource].
+  Song _pickSong(List<Song> candidates, String sourceKey) {
     if (candidates.length == 1) return candidates.first;
-    final pool = candidates.where((s) => s.id != lastPlayedSongId).toList();
-    return pool.isEmpty
-        ? candidates[_random.nextInt(candidates.length)]
-        : pool[_random.nextInt(pool.length)];
+
+    final used = _usedSongIds.putIfAbsent(sourceKey, () => <String>{});
+    var pool = candidates.where((s) => !used.contains(s.id)).toList();
+
+    if (pool.isEmpty) {
+      used.clear();
+      final lastPlayed = _lastPlayedBySource[sourceKey];
+      pool = candidates.where((s) => s.id != lastPlayed).toList();
+    }
+
+    final song = pool[_random.nextInt(pool.length)];
+    used.add(song.id);
+    _lastPlayedBySource[sourceKey] = song.id;
+    return song;
   }
 
   void _onTrackNaturalEnd() {
@@ -310,11 +340,16 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
     final resolved = s?.currentEntry;
     if (s == null || resolved == null) return;
 
-    // The set runs forward only - a break after the last entry would just
-    // be dead air before the completion screen, so skip straight there.
+    // Reaching the last entry only skips the break if the set is actually
+    // about to end - a break after the last entry would otherwise just be
+    // dead air before the completion screen. With repeat on, the last entry
+    // is followed by the first one again, exactly like any other
+    // entry-to-entry transition, so it still gets its break.
+    final isLastEntry = s.entryIndex >= s.entries.length - 1;
+    final willLoop = isLastEntry && s.practiceSet.repeatEnabled;
     // A zero-length break is likewise skipped entirely - no cue of any kind
     // should play for a break that isn't actually happening.
-    if (s.entryIndex >= s.entries.length - 1 || resolved.breakSeconds <= 0) {
+    if ((isLastEntry && !willLoop) || resolved.breakSeconds <= 0) {
       _advance();
       return;
     }
@@ -396,6 +431,8 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
     if (s == null) return;
     if (s.entryIndex < s.entries.length - 1) {
       _playEntry(s.entryIndex + 1);
+    } else if (s.practiceSet.repeatEnabled) {
+      _playEntry(0);
     } else {
       _generation++;
       _playTicker?.cancel();
