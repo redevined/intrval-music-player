@@ -6,7 +6,6 @@ import '../../core/constants.dart';
 import '../../data/database/database.dart';
 import '../../data/providers.dart';
 import '../../widgets/labeled_slider.dart';
-import '../library/library_screen.dart';
 import '../player/practice_session_screen.dart';
 import '../playlists/playlist_list_screen.dart';
 
@@ -35,7 +34,6 @@ class SetBuilderScreen extends ConsumerWidget {
         practiceSet;
     final entriesAsync = ref.watch(_setEntriesProvider(practiceSet.id));
     final playlistsAsync = ref.watch(playlistsProvider);
-    final foldersAsync = ref.watch(bookmarkedFoldersProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -51,8 +49,6 @@ class SetBuilderScreen extends ConsumerWidget {
       body: entriesAsync.when(
         data: (entries) {
           final playlists = playlistsAsync.valueOrNull ?? const <Playlist>[];
-          final folders =
-              foldersAsync.valueOrNull ?? const <BookmarkedFolder>[];
 
           if (entries.isEmpty) {
             return const Center(
@@ -63,28 +59,16 @@ class SetBuilderScreen extends ConsumerWidget {
             itemCount: entries.length,
             itemBuilder: (context, i) {
               final entry = entries[i];
-              final sourceName = entry.playlistId != null
-                  ? playlists
-                        .firstWhere(
-                          (p) => p.id == entry.playlistId,
-                          orElse: () => Playlist(
-                            id: '',
-                            name: '(deleted playlist)',
-                            dateCreated: DateTime.now(),
-                          ),
-                        )
-                        .name
-                  : folders
-                        .firstWhere(
-                          (f) => f.id == entry.folderId,
-                          orElse: () => BookmarkedFolder(
-                            id: '',
-                            treeUri: '',
-                            displayName: '(deleted folder)',
-                            dateAdded: DateTime.now(),
-                          ),
-                        )
-                        .displayName;
+              final sourceName = playlists
+                  .firstWhere(
+                    (p) => p.id == entry.playlistId,
+                    orElse: () => Playlist(
+                      id: '',
+                      name: '(deleted playlist)',
+                      dateCreated: DateTime.now(),
+                    ),
+                  )
+                  .name;
 
               return ListTile(
                 key: ValueKey(entry.id),

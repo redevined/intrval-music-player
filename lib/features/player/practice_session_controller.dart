@@ -202,13 +202,8 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
   }
 
   Future<List<Song>> _candidateSongs(SetEntry entry) async {
-    if (entry.playlistId != null) {
-      return _ref.read(playlistRepositoryProvider).watchSongs(entry.playlistId!).first;
-    }
-    if (entry.folderId != null) {
-      return _ref.read(songRepositoryProvider).songsForFolder(entry.folderId!);
-    }
-    return [];
+    if (entry.playlistId == null) return [];
+    return _ref.read(playlistRepositoryProvider).watchSongs(entry.playlistId!).first;
   }
 
   Future<void> _playEntry(int index) async {
@@ -234,8 +229,7 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
       return;
     }
 
-    final sourceKey = resolved.entry.playlistId ?? resolved.entry.folderId!;
-    final song = _pickSong(candidates, sourceKey);
+    final song = _pickSong(candidates, resolved.entry.playlistId!);
 
     final handler = _ref.read(audioHandlerProvider);
     try {
@@ -304,9 +298,9 @@ class PracticeSessionController extends StateNotifier<PracticeSessionState?> {
   }
 
   /// Draws a song from [candidates] without replacement, tracked per
-  /// [sourceKey] (a playlist/folder id - shared by every entry pulling from
-  /// the same source, so e.g. two entries both using playlist "JV" draw
-  /// from the same pool rather than each avoiding repeats independently).
+  /// [sourceKey] (a playlist id - shared by every entry pulling from the
+  /// same playlist, so e.g. two entries both using playlist "JV" draw from
+  /// the same pool rather than each avoiding repeats independently).
   /// Once every candidate has come up, the pool reshuffles - but the song
   /// that had just played from this source is still excluded from that
   /// very next pick, so a reshuffle never immediately repeats it. See

@@ -70,7 +70,6 @@ class PracticeSetRepository {
     String setId, {
     required String label,
     String? playlistId,
-    String? folderId,
   }) async {
     final currentMax = await (_db.selectOnly(_db.setEntries)
           ..addColumns([_db.setEntries.sortIndex.max()])
@@ -87,7 +86,6 @@ class PracticeSetRepository {
             sortIndex: nextIndex,
             label: label,
             playlistId: Value(playlistId),
-            folderId: Value(folderId),
           ),
         );
     return id;
