@@ -7,7 +7,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'tables.dart';
 
-export 'tables.dart' show BreakCueMode, SelectionMode;
+export 'tables.dart' show BreakCueMode;
 
 part 'database.g.dart';
 
@@ -27,7 +27,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -53,6 +53,26 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 5) {
             await m.addColumn(practiceSets, practiceSets.repeatEnabled);
+          }
+          if (from < 6) {
+            // These per-set/per-entry overrides were superseded by single
+            // global settings (breakCueModeProvider/fadeOutSecondsProvider)
+            // and were never actually read anywhere; folderId/selectionMode
+            // /lastPlayedSongId are similarly dead - sets have only been
+            // creatable from playlists for a while, and song selection now
+            // lives entirely in PracticeSessionController's in-memory pools.
+            //
+            // Uses an explicit table rebuild rather than repeated
+            // Migrator.dropColumn calls - the latter was observed on-device
+            // to corrupt a retained column (defaultBreakSeconds silently
+            // reset to its schema default) when dropping several columns
+            // from the same table in one migration. TableMigration copies
+            // every column that still exists (by name) into the recreated
+            // table and drops the rest, which is safe for this case since
+            // none of the retained columns are being renamed or need a
+            // value transformation.
+            await m.alterTable(TableMigration(practiceSets));
+            await m.alterTable(TableMigration(setEntries));
           }
         },
       );

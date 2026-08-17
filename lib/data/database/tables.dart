@@ -80,14 +80,8 @@ class BookmarkedFolders extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-/// Enum-like string values for [SetEntries.selectionMode].
-class SelectionMode {
-  static const randomNoImmediateRepeat = 'randomNoImmediateRepeat';
-  static const sequential = 'sequential';
-}
-
-/// Enum-like string values for break audio cue mode, used both at the
-/// [PracticeSets] (default) and [SetEntries] (override) level.
+/// Enum-like string values for the global break audio cue mode setting
+/// (see `breakCueModeProvider`).
 class BreakCueMode {
   static const silence = 'silence';
   static const beepBeforeEnd = 'beepBeforeEnd';
@@ -95,8 +89,10 @@ class BreakCueMode {
 }
 
 /// A "practice set" (meta-playlist): an ordered sequence of entries, each
-/// pulling one song from a playlist or bookmarked folder, played top to
-/// bottom with configurable tempo/break/fade defaults.
+/// pulling one song from a playlist, played top to bottom with a
+/// configurable tempo/break. The break cue (silence/beep/ambient track) and
+/// its fade-out are single global settings (see `breakCueModeProvider`,
+/// `fadeOutSecondsProvider`), not something decided per set.
 class PracticeSets extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
@@ -107,14 +103,6 @@ class PracticeSets extends Table {
       integer().withDefault(const Constant(105))(); // 1:45
   IntColumn get defaultBreakSeconds =>
       integer().withDefault(const Constant(30))();
-  IntColumn get defaultFadeOutSeconds =>
-      integer().withDefault(const Constant(3))();
-  TextColumn get defaultBreakCueMode =>
-      text().withDefault(const Constant(BreakCueMode.silence))();
-  IntColumn get defaultBeepLeadSeconds =>
-      integer().withDefault(const Constant(5))();
-  TextColumn get defaultAmbientSongId =>
-      text().nullable().references(Songs, #id)();
 
   /// When true, a session loops back to the first entry after the last one
   /// finishes (indefinitely) instead of completing. See
@@ -130,9 +118,8 @@ class PracticeSets extends Table {
 }
 
 /// A single entry (dance slot) within a [PracticeSets]. Sources one random
-/// (or sequential) song per play from either a playlist or a bookmarked
-/// folder. Any override column left null falls back to the parent set's
-/// default.
+/// song per play from a playlist. Any override column left null falls back
+/// to the parent set's default.
 class SetEntries extends Table {
   TextColumn get id => text()();
   TextColumn get setId =>
@@ -140,32 +127,16 @@ class SetEntries extends Table {
   IntColumn get sortIndex => integer()();
 
   /// Display label shown during practice (e.g. "Waltz"). Defaults to the
-  /// source playlist/folder name if not set.
+  /// source playlist's name if not set.
   TextColumn get label => text()();
 
-  /// Exactly one of these two should be non-null.
   TextColumn get playlistId =>
       text().nullable().references(Playlists, #id, onDelete: KeyAction.cascade)();
-  TextColumn get folderId => text()
-      .nullable()
-      .references(BookmarkedFolders, #id, onDelete: KeyAction.cascade)();
-
-  TextColumn get selectionMode => text()
-      .withDefault(const Constant(SelectionMode.randomNoImmediateRepeat))();
-
-  /// Last song played for this entry, used to avoid immediate repeats and
-  /// to resume position in sequential mode.
-  TextColumn get lastPlayedSongId => text().nullable()();
 
   // Per-entry overrides (null = inherit from parent PracticeSet).
   IntColumn get tempoPercent => integer().nullable()();
   IntColumn get playDurationSeconds => integer().nullable()();
   IntColumn get breakSeconds => integer().nullable()();
-  IntColumn get fadeOutSeconds => integer().nullable()();
-  TextColumn get breakCueMode => text().nullable()();
-  IntColumn get beepLeadSeconds => integer().nullable()();
-  TextColumn get ambientSongId =>
-      text().nullable().references(Songs, #id)();
 
   @override
   Set<Column> get primaryKey => {id};

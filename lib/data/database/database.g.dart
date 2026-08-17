@@ -1650,54 +1650,6 @@ class $PracticeSetsTable extends PracticeSets
     requiredDuringInsert: false,
     defaultValue: const Constant(30),
   );
-  static const VerificationMeta _defaultFadeOutSecondsMeta =
-      const VerificationMeta('defaultFadeOutSeconds');
-  @override
-  late final GeneratedColumn<int> defaultFadeOutSeconds = GeneratedColumn<int>(
-    'default_fade_out_seconds',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(3),
-  );
-  static const VerificationMeta _defaultBreakCueModeMeta =
-      const VerificationMeta('defaultBreakCueMode');
-  @override
-  late final GeneratedColumn<String> defaultBreakCueMode =
-      GeneratedColumn<String>(
-        'default_break_cue_mode',
-        aliasedName,
-        false,
-        type: DriftSqlType.string,
-        requiredDuringInsert: false,
-        defaultValue: const Constant(BreakCueMode.silence),
-      );
-  static const VerificationMeta _defaultBeepLeadSecondsMeta =
-      const VerificationMeta('defaultBeepLeadSeconds');
-  @override
-  late final GeneratedColumn<int> defaultBeepLeadSeconds = GeneratedColumn<int>(
-    'default_beep_lead_seconds',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(5),
-  );
-  static const VerificationMeta _defaultAmbientSongIdMeta =
-      const VerificationMeta('defaultAmbientSongId');
-  @override
-  late final GeneratedColumn<String> defaultAmbientSongId =
-      GeneratedColumn<String>(
-        'default_ambient_song_id',
-        aliasedName,
-        true,
-        type: DriftSqlType.string,
-        requiredDuringInsert: false,
-        defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'REFERENCES songs (id)',
-        ),
-      );
   static const VerificationMeta _repeatEnabledMeta = const VerificationMeta(
     'repeatEnabled',
   );
@@ -1732,10 +1684,6 @@ class $PracticeSetsTable extends PracticeSets
     defaultTempoPercent,
     defaultPlayDurationSeconds,
     defaultBreakSeconds,
-    defaultFadeOutSeconds,
-    defaultBreakCueMode,
-    defaultBeepLeadSeconds,
-    defaultAmbientSongId,
     repeatEnabled,
     dateCreated,
   ];
@@ -1791,42 +1739,6 @@ class $PracticeSetsTable extends PracticeSets
         ),
       );
     }
-    if (data.containsKey('default_fade_out_seconds')) {
-      context.handle(
-        _defaultFadeOutSecondsMeta,
-        defaultFadeOutSeconds.isAcceptableOrUnknown(
-          data['default_fade_out_seconds']!,
-          _defaultFadeOutSecondsMeta,
-        ),
-      );
-    }
-    if (data.containsKey('default_break_cue_mode')) {
-      context.handle(
-        _defaultBreakCueModeMeta,
-        defaultBreakCueMode.isAcceptableOrUnknown(
-          data['default_break_cue_mode']!,
-          _defaultBreakCueModeMeta,
-        ),
-      );
-    }
-    if (data.containsKey('default_beep_lead_seconds')) {
-      context.handle(
-        _defaultBeepLeadSecondsMeta,
-        defaultBeepLeadSeconds.isAcceptableOrUnknown(
-          data['default_beep_lead_seconds']!,
-          _defaultBeepLeadSecondsMeta,
-        ),
-      );
-    }
-    if (data.containsKey('default_ambient_song_id')) {
-      context.handle(
-        _defaultAmbientSongIdMeta,
-        defaultAmbientSongId.isAcceptableOrUnknown(
-          data['default_ambient_song_id']!,
-          _defaultAmbientSongIdMeta,
-        ),
-      );
-    }
     if (data.containsKey('repeat_enabled')) {
       context.handle(
         _repeatEnabledMeta,
@@ -1874,22 +1786,6 @@ class $PracticeSetsTable extends PracticeSets
         DriftSqlType.int,
         data['${effectivePrefix}default_break_seconds'],
       )!,
-      defaultFadeOutSeconds: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}default_fade_out_seconds'],
-      )!,
-      defaultBreakCueMode: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}default_break_cue_mode'],
-      )!,
-      defaultBeepLeadSeconds: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}default_beep_lead_seconds'],
-      )!,
-      defaultAmbientSongId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}default_ambient_song_id'],
-      ),
       repeatEnabled: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}repeat_enabled'],
@@ -1915,10 +1811,6 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
   final int defaultTempoPercent;
   final int defaultPlayDurationSeconds;
   final int defaultBreakSeconds;
-  final int defaultFadeOutSeconds;
-  final String defaultBreakCueMode;
-  final int defaultBeepLeadSeconds;
-  final String? defaultAmbientSongId;
 
   /// When true, a session loops back to the first entry after the last one
   /// finishes (indefinitely) instead of completing. See
@@ -1931,10 +1823,6 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
     required this.defaultTempoPercent,
     required this.defaultPlayDurationSeconds,
     required this.defaultBreakSeconds,
-    required this.defaultFadeOutSeconds,
-    required this.defaultBreakCueMode,
-    required this.defaultBeepLeadSeconds,
-    this.defaultAmbientSongId,
     required this.repeatEnabled,
     required this.dateCreated,
   });
@@ -1948,12 +1836,6 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
       defaultPlayDurationSeconds,
     );
     map['default_break_seconds'] = Variable<int>(defaultBreakSeconds);
-    map['default_fade_out_seconds'] = Variable<int>(defaultFadeOutSeconds);
-    map['default_break_cue_mode'] = Variable<String>(defaultBreakCueMode);
-    map['default_beep_lead_seconds'] = Variable<int>(defaultBeepLeadSeconds);
-    if (!nullToAbsent || defaultAmbientSongId != null) {
-      map['default_ambient_song_id'] = Variable<String>(defaultAmbientSongId);
-    }
     map['repeat_enabled'] = Variable<bool>(repeatEnabled);
     map['date_created'] = Variable<DateTime>(dateCreated);
     return map;
@@ -1966,12 +1848,6 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
       defaultTempoPercent: Value(defaultTempoPercent),
       defaultPlayDurationSeconds: Value(defaultPlayDurationSeconds),
       defaultBreakSeconds: Value(defaultBreakSeconds),
-      defaultFadeOutSeconds: Value(defaultFadeOutSeconds),
-      defaultBreakCueMode: Value(defaultBreakCueMode),
-      defaultBeepLeadSeconds: Value(defaultBeepLeadSeconds),
-      defaultAmbientSongId: defaultAmbientSongId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(defaultAmbientSongId),
       repeatEnabled: Value(repeatEnabled),
       dateCreated: Value(dateCreated),
     );
@@ -1994,18 +1870,6 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
       defaultBreakSeconds: serializer.fromJson<int>(
         json['defaultBreakSeconds'],
       ),
-      defaultFadeOutSeconds: serializer.fromJson<int>(
-        json['defaultFadeOutSeconds'],
-      ),
-      defaultBreakCueMode: serializer.fromJson<String>(
-        json['defaultBreakCueMode'],
-      ),
-      defaultBeepLeadSeconds: serializer.fromJson<int>(
-        json['defaultBeepLeadSeconds'],
-      ),
-      defaultAmbientSongId: serializer.fromJson<String?>(
-        json['defaultAmbientSongId'],
-      ),
       repeatEnabled: serializer.fromJson<bool>(json['repeatEnabled']),
       dateCreated: serializer.fromJson<DateTime>(json['dateCreated']),
     );
@@ -2021,10 +1885,6 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
         defaultPlayDurationSeconds,
       ),
       'defaultBreakSeconds': serializer.toJson<int>(defaultBreakSeconds),
-      'defaultFadeOutSeconds': serializer.toJson<int>(defaultFadeOutSeconds),
-      'defaultBreakCueMode': serializer.toJson<String>(defaultBreakCueMode),
-      'defaultBeepLeadSeconds': serializer.toJson<int>(defaultBeepLeadSeconds),
-      'defaultAmbientSongId': serializer.toJson<String?>(defaultAmbientSongId),
       'repeatEnabled': serializer.toJson<bool>(repeatEnabled),
       'dateCreated': serializer.toJson<DateTime>(dateCreated),
     };
@@ -2036,10 +1896,6 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
     int? defaultTempoPercent,
     int? defaultPlayDurationSeconds,
     int? defaultBreakSeconds,
-    int? defaultFadeOutSeconds,
-    String? defaultBreakCueMode,
-    int? defaultBeepLeadSeconds,
-    Value<String?> defaultAmbientSongId = const Value.absent(),
     bool? repeatEnabled,
     DateTime? dateCreated,
   }) => PracticeSet(
@@ -2049,13 +1905,6 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
     defaultPlayDurationSeconds:
         defaultPlayDurationSeconds ?? this.defaultPlayDurationSeconds,
     defaultBreakSeconds: defaultBreakSeconds ?? this.defaultBreakSeconds,
-    defaultFadeOutSeconds: defaultFadeOutSeconds ?? this.defaultFadeOutSeconds,
-    defaultBreakCueMode: defaultBreakCueMode ?? this.defaultBreakCueMode,
-    defaultBeepLeadSeconds:
-        defaultBeepLeadSeconds ?? this.defaultBeepLeadSeconds,
-    defaultAmbientSongId: defaultAmbientSongId.present
-        ? defaultAmbientSongId.value
-        : this.defaultAmbientSongId,
     repeatEnabled: repeatEnabled ?? this.repeatEnabled,
     dateCreated: dateCreated ?? this.dateCreated,
   );
@@ -2072,18 +1921,6 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
       defaultBreakSeconds: data.defaultBreakSeconds.present
           ? data.defaultBreakSeconds.value
           : this.defaultBreakSeconds,
-      defaultFadeOutSeconds: data.defaultFadeOutSeconds.present
-          ? data.defaultFadeOutSeconds.value
-          : this.defaultFadeOutSeconds,
-      defaultBreakCueMode: data.defaultBreakCueMode.present
-          ? data.defaultBreakCueMode.value
-          : this.defaultBreakCueMode,
-      defaultBeepLeadSeconds: data.defaultBeepLeadSeconds.present
-          ? data.defaultBeepLeadSeconds.value
-          : this.defaultBeepLeadSeconds,
-      defaultAmbientSongId: data.defaultAmbientSongId.present
-          ? data.defaultAmbientSongId.value
-          : this.defaultAmbientSongId,
       repeatEnabled: data.repeatEnabled.present
           ? data.repeatEnabled.value
           : this.repeatEnabled,
@@ -2101,10 +1938,6 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
           ..write('defaultTempoPercent: $defaultTempoPercent, ')
           ..write('defaultPlayDurationSeconds: $defaultPlayDurationSeconds, ')
           ..write('defaultBreakSeconds: $defaultBreakSeconds, ')
-          ..write('defaultFadeOutSeconds: $defaultFadeOutSeconds, ')
-          ..write('defaultBreakCueMode: $defaultBreakCueMode, ')
-          ..write('defaultBeepLeadSeconds: $defaultBeepLeadSeconds, ')
-          ..write('defaultAmbientSongId: $defaultAmbientSongId, ')
           ..write('repeatEnabled: $repeatEnabled, ')
           ..write('dateCreated: $dateCreated')
           ..write(')'))
@@ -2118,10 +1951,6 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
     defaultTempoPercent,
     defaultPlayDurationSeconds,
     defaultBreakSeconds,
-    defaultFadeOutSeconds,
-    defaultBreakCueMode,
-    defaultBeepLeadSeconds,
-    defaultAmbientSongId,
     repeatEnabled,
     dateCreated,
   );
@@ -2134,10 +1963,6 @@ class PracticeSet extends DataClass implements Insertable<PracticeSet> {
           other.defaultTempoPercent == this.defaultTempoPercent &&
           other.defaultPlayDurationSeconds == this.defaultPlayDurationSeconds &&
           other.defaultBreakSeconds == this.defaultBreakSeconds &&
-          other.defaultFadeOutSeconds == this.defaultFadeOutSeconds &&
-          other.defaultBreakCueMode == this.defaultBreakCueMode &&
-          other.defaultBeepLeadSeconds == this.defaultBeepLeadSeconds &&
-          other.defaultAmbientSongId == this.defaultAmbientSongId &&
           other.repeatEnabled == this.repeatEnabled &&
           other.dateCreated == this.dateCreated);
 }
@@ -2148,10 +1973,6 @@ class PracticeSetsCompanion extends UpdateCompanion<PracticeSet> {
   final Value<int> defaultTempoPercent;
   final Value<int> defaultPlayDurationSeconds;
   final Value<int> defaultBreakSeconds;
-  final Value<int> defaultFadeOutSeconds;
-  final Value<String> defaultBreakCueMode;
-  final Value<int> defaultBeepLeadSeconds;
-  final Value<String?> defaultAmbientSongId;
   final Value<bool> repeatEnabled;
   final Value<DateTime> dateCreated;
   final Value<int> rowid;
@@ -2161,10 +1982,6 @@ class PracticeSetsCompanion extends UpdateCompanion<PracticeSet> {
     this.defaultTempoPercent = const Value.absent(),
     this.defaultPlayDurationSeconds = const Value.absent(),
     this.defaultBreakSeconds = const Value.absent(),
-    this.defaultFadeOutSeconds = const Value.absent(),
-    this.defaultBreakCueMode = const Value.absent(),
-    this.defaultBeepLeadSeconds = const Value.absent(),
-    this.defaultAmbientSongId = const Value.absent(),
     this.repeatEnabled = const Value.absent(),
     this.dateCreated = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -2175,10 +1992,6 @@ class PracticeSetsCompanion extends UpdateCompanion<PracticeSet> {
     this.defaultTempoPercent = const Value.absent(),
     this.defaultPlayDurationSeconds = const Value.absent(),
     this.defaultBreakSeconds = const Value.absent(),
-    this.defaultFadeOutSeconds = const Value.absent(),
-    this.defaultBreakCueMode = const Value.absent(),
-    this.defaultBeepLeadSeconds = const Value.absent(),
-    this.defaultAmbientSongId = const Value.absent(),
     this.repeatEnabled = const Value.absent(),
     this.dateCreated = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -2190,10 +2003,6 @@ class PracticeSetsCompanion extends UpdateCompanion<PracticeSet> {
     Expression<int>? defaultTempoPercent,
     Expression<int>? defaultPlayDurationSeconds,
     Expression<int>? defaultBreakSeconds,
-    Expression<int>? defaultFadeOutSeconds,
-    Expression<String>? defaultBreakCueMode,
-    Expression<int>? defaultBeepLeadSeconds,
-    Expression<String>? defaultAmbientSongId,
     Expression<bool>? repeatEnabled,
     Expression<DateTime>? dateCreated,
     Expression<int>? rowid,
@@ -2207,14 +2016,6 @@ class PracticeSetsCompanion extends UpdateCompanion<PracticeSet> {
         'default_play_duration_seconds': defaultPlayDurationSeconds,
       if (defaultBreakSeconds != null)
         'default_break_seconds': defaultBreakSeconds,
-      if (defaultFadeOutSeconds != null)
-        'default_fade_out_seconds': defaultFadeOutSeconds,
-      if (defaultBreakCueMode != null)
-        'default_break_cue_mode': defaultBreakCueMode,
-      if (defaultBeepLeadSeconds != null)
-        'default_beep_lead_seconds': defaultBeepLeadSeconds,
-      if (defaultAmbientSongId != null)
-        'default_ambient_song_id': defaultAmbientSongId,
       if (repeatEnabled != null) 'repeat_enabled': repeatEnabled,
       if (dateCreated != null) 'date_created': dateCreated,
       if (rowid != null) 'rowid': rowid,
@@ -2227,10 +2028,6 @@ class PracticeSetsCompanion extends UpdateCompanion<PracticeSet> {
     Value<int>? defaultTempoPercent,
     Value<int>? defaultPlayDurationSeconds,
     Value<int>? defaultBreakSeconds,
-    Value<int>? defaultFadeOutSeconds,
-    Value<String>? defaultBreakCueMode,
-    Value<int>? defaultBeepLeadSeconds,
-    Value<String?>? defaultAmbientSongId,
     Value<bool>? repeatEnabled,
     Value<DateTime>? dateCreated,
     Value<int>? rowid,
@@ -2242,12 +2039,6 @@ class PracticeSetsCompanion extends UpdateCompanion<PracticeSet> {
       defaultPlayDurationSeconds:
           defaultPlayDurationSeconds ?? this.defaultPlayDurationSeconds,
       defaultBreakSeconds: defaultBreakSeconds ?? this.defaultBreakSeconds,
-      defaultFadeOutSeconds:
-          defaultFadeOutSeconds ?? this.defaultFadeOutSeconds,
-      defaultBreakCueMode: defaultBreakCueMode ?? this.defaultBreakCueMode,
-      defaultBeepLeadSeconds:
-          defaultBeepLeadSeconds ?? this.defaultBeepLeadSeconds,
-      defaultAmbientSongId: defaultAmbientSongId ?? this.defaultAmbientSongId,
       repeatEnabled: repeatEnabled ?? this.repeatEnabled,
       dateCreated: dateCreated ?? this.dateCreated,
       rowid: rowid ?? this.rowid,
@@ -2274,26 +2065,6 @@ class PracticeSetsCompanion extends UpdateCompanion<PracticeSet> {
     if (defaultBreakSeconds.present) {
       map['default_break_seconds'] = Variable<int>(defaultBreakSeconds.value);
     }
-    if (defaultFadeOutSeconds.present) {
-      map['default_fade_out_seconds'] = Variable<int>(
-        defaultFadeOutSeconds.value,
-      );
-    }
-    if (defaultBreakCueMode.present) {
-      map['default_break_cue_mode'] = Variable<String>(
-        defaultBreakCueMode.value,
-      );
-    }
-    if (defaultBeepLeadSeconds.present) {
-      map['default_beep_lead_seconds'] = Variable<int>(
-        defaultBeepLeadSeconds.value,
-      );
-    }
-    if (defaultAmbientSongId.present) {
-      map['default_ambient_song_id'] = Variable<String>(
-        defaultAmbientSongId.value,
-      );
-    }
     if (repeatEnabled.present) {
       map['repeat_enabled'] = Variable<bool>(repeatEnabled.value);
     }
@@ -2314,10 +2085,6 @@ class PracticeSetsCompanion extends UpdateCompanion<PracticeSet> {
           ..write('defaultTempoPercent: $defaultTempoPercent, ')
           ..write('defaultPlayDurationSeconds: $defaultPlayDurationSeconds, ')
           ..write('defaultBreakSeconds: $defaultBreakSeconds, ')
-          ..write('defaultFadeOutSeconds: $defaultFadeOutSeconds, ')
-          ..write('defaultBreakCueMode: $defaultBreakCueMode, ')
-          ..write('defaultBeepLeadSeconds: $defaultBeepLeadSeconds, ')
-          ..write('defaultAmbientSongId: $defaultAmbientSongId, ')
           ..write('repeatEnabled: $repeatEnabled, ')
           ..write('dateCreated: $dateCreated, ')
           ..write('rowid: $rowid')
@@ -2387,43 +2154,6 @@ class $SetEntriesTable extends SetEntries
       'REFERENCES playlists (id) ON DELETE CASCADE',
     ),
   );
-  static const VerificationMeta _folderIdMeta = const VerificationMeta(
-    'folderId',
-  );
-  @override
-  late final GeneratedColumn<String> folderId = GeneratedColumn<String>(
-    'folder_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES bookmarked_folders (id) ON DELETE CASCADE',
-    ),
-  );
-  static const VerificationMeta _selectionModeMeta = const VerificationMeta(
-    'selectionMode',
-  );
-  @override
-  late final GeneratedColumn<String> selectionMode = GeneratedColumn<String>(
-    'selection_mode',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(SelectionMode.randomNoImmediateRepeat),
-  );
-  static const VerificationMeta _lastPlayedSongIdMeta = const VerificationMeta(
-    'lastPlayedSongId',
-  );
-  @override
-  late final GeneratedColumn<String> lastPlayedSongId = GeneratedColumn<String>(
-    'last_played_song_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
   static const VerificationMeta _tempoPercentMeta = const VerificationMeta(
     'tempoPercent',
   );
@@ -2456,53 +2186,6 @@ class $SetEntriesTable extends SetEntries
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _fadeOutSecondsMeta = const VerificationMeta(
-    'fadeOutSeconds',
-  );
-  @override
-  late final GeneratedColumn<int> fadeOutSeconds = GeneratedColumn<int>(
-    'fade_out_seconds',
-    aliasedName,
-    true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _breakCueModeMeta = const VerificationMeta(
-    'breakCueMode',
-  );
-  @override
-  late final GeneratedColumn<String> breakCueMode = GeneratedColumn<String>(
-    'break_cue_mode',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _beepLeadSecondsMeta = const VerificationMeta(
-    'beepLeadSeconds',
-  );
-  @override
-  late final GeneratedColumn<int> beepLeadSeconds = GeneratedColumn<int>(
-    'beep_lead_seconds',
-    aliasedName,
-    true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _ambientSongIdMeta = const VerificationMeta(
-    'ambientSongId',
-  );
-  @override
-  late final GeneratedColumn<String> ambientSongId = GeneratedColumn<String>(
-    'ambient_song_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES songs (id)',
-    ),
-  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2510,16 +2193,9 @@ class $SetEntriesTable extends SetEntries
     sortIndex,
     label,
     playlistId,
-    folderId,
-    selectionMode,
-    lastPlayedSongId,
     tempoPercent,
     playDurationSeconds,
     breakSeconds,
-    fadeOutSeconds,
-    breakCueMode,
-    beepLeadSeconds,
-    ambientSongId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2568,30 +2244,6 @@ class $SetEntriesTable extends SetEntries
         playlistId.isAcceptableOrUnknown(data['playlist_id']!, _playlistIdMeta),
       );
     }
-    if (data.containsKey('folder_id')) {
-      context.handle(
-        _folderIdMeta,
-        folderId.isAcceptableOrUnknown(data['folder_id']!, _folderIdMeta),
-      );
-    }
-    if (data.containsKey('selection_mode')) {
-      context.handle(
-        _selectionModeMeta,
-        selectionMode.isAcceptableOrUnknown(
-          data['selection_mode']!,
-          _selectionModeMeta,
-        ),
-      );
-    }
-    if (data.containsKey('last_played_song_id')) {
-      context.handle(
-        _lastPlayedSongIdMeta,
-        lastPlayedSongId.isAcceptableOrUnknown(
-          data['last_played_song_id']!,
-          _lastPlayedSongIdMeta,
-        ),
-      );
-    }
     if (data.containsKey('tempo_percent')) {
       context.handle(
         _tempoPercentMeta,
@@ -2616,42 +2268,6 @@ class $SetEntriesTable extends SetEntries
         breakSeconds.isAcceptableOrUnknown(
           data['break_seconds']!,
           _breakSecondsMeta,
-        ),
-      );
-    }
-    if (data.containsKey('fade_out_seconds')) {
-      context.handle(
-        _fadeOutSecondsMeta,
-        fadeOutSeconds.isAcceptableOrUnknown(
-          data['fade_out_seconds']!,
-          _fadeOutSecondsMeta,
-        ),
-      );
-    }
-    if (data.containsKey('break_cue_mode')) {
-      context.handle(
-        _breakCueModeMeta,
-        breakCueMode.isAcceptableOrUnknown(
-          data['break_cue_mode']!,
-          _breakCueModeMeta,
-        ),
-      );
-    }
-    if (data.containsKey('beep_lead_seconds')) {
-      context.handle(
-        _beepLeadSecondsMeta,
-        beepLeadSeconds.isAcceptableOrUnknown(
-          data['beep_lead_seconds']!,
-          _beepLeadSecondsMeta,
-        ),
-      );
-    }
-    if (data.containsKey('ambient_song_id')) {
-      context.handle(
-        _ambientSongIdMeta,
-        ambientSongId.isAcceptableOrUnknown(
-          data['ambient_song_id']!,
-          _ambientSongIdMeta,
         ),
       );
     }
@@ -2684,18 +2300,6 @@ class $SetEntriesTable extends SetEntries
         DriftSqlType.string,
         data['${effectivePrefix}playlist_id'],
       ),
-      folderId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}folder_id'],
-      ),
-      selectionMode: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}selection_mode'],
-      )!,
-      lastPlayedSongId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}last_played_song_id'],
-      ),
       tempoPercent: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}tempo_percent'],
@@ -2707,22 +2311,6 @@ class $SetEntriesTable extends SetEntries
       breakSeconds: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}break_seconds'],
-      ),
-      fadeOutSeconds: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}fade_out_seconds'],
-      ),
-      breakCueMode: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}break_cue_mode'],
-      ),
-      beepLeadSeconds: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}beep_lead_seconds'],
-      ),
-      ambientSongId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}ambient_song_id'],
       ),
     );
   }
@@ -2739,40 +2327,21 @@ class SetEntry extends DataClass implements Insertable<SetEntry> {
   final int sortIndex;
 
   /// Display label shown during practice (e.g. "Waltz"). Defaults to the
-  /// source playlist/folder name if not set.
+  /// source playlist's name if not set.
   final String label;
-
-  /// Exactly one of these two should be non-null.
   final String? playlistId;
-  final String? folderId;
-  final String selectionMode;
-
-  /// Last song played for this entry, used to avoid immediate repeats and
-  /// to resume position in sequential mode.
-  final String? lastPlayedSongId;
   final int? tempoPercent;
   final int? playDurationSeconds;
   final int? breakSeconds;
-  final int? fadeOutSeconds;
-  final String? breakCueMode;
-  final int? beepLeadSeconds;
-  final String? ambientSongId;
   const SetEntry({
     required this.id,
     required this.setId,
     required this.sortIndex,
     required this.label,
     this.playlistId,
-    this.folderId,
-    required this.selectionMode,
-    this.lastPlayedSongId,
     this.tempoPercent,
     this.playDurationSeconds,
     this.breakSeconds,
-    this.fadeOutSeconds,
-    this.breakCueMode,
-    this.beepLeadSeconds,
-    this.ambientSongId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2784,13 +2353,6 @@ class SetEntry extends DataClass implements Insertable<SetEntry> {
     if (!nullToAbsent || playlistId != null) {
       map['playlist_id'] = Variable<String>(playlistId);
     }
-    if (!nullToAbsent || folderId != null) {
-      map['folder_id'] = Variable<String>(folderId);
-    }
-    map['selection_mode'] = Variable<String>(selectionMode);
-    if (!nullToAbsent || lastPlayedSongId != null) {
-      map['last_played_song_id'] = Variable<String>(lastPlayedSongId);
-    }
     if (!nullToAbsent || tempoPercent != null) {
       map['tempo_percent'] = Variable<int>(tempoPercent);
     }
@@ -2799,18 +2361,6 @@ class SetEntry extends DataClass implements Insertable<SetEntry> {
     }
     if (!nullToAbsent || breakSeconds != null) {
       map['break_seconds'] = Variable<int>(breakSeconds);
-    }
-    if (!nullToAbsent || fadeOutSeconds != null) {
-      map['fade_out_seconds'] = Variable<int>(fadeOutSeconds);
-    }
-    if (!nullToAbsent || breakCueMode != null) {
-      map['break_cue_mode'] = Variable<String>(breakCueMode);
-    }
-    if (!nullToAbsent || beepLeadSeconds != null) {
-      map['beep_lead_seconds'] = Variable<int>(beepLeadSeconds);
-    }
-    if (!nullToAbsent || ambientSongId != null) {
-      map['ambient_song_id'] = Variable<String>(ambientSongId);
     }
     return map;
   }
@@ -2824,13 +2374,6 @@ class SetEntry extends DataClass implements Insertable<SetEntry> {
       playlistId: playlistId == null && nullToAbsent
           ? const Value.absent()
           : Value(playlistId),
-      folderId: folderId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(folderId),
-      selectionMode: Value(selectionMode),
-      lastPlayedSongId: lastPlayedSongId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(lastPlayedSongId),
       tempoPercent: tempoPercent == null && nullToAbsent
           ? const Value.absent()
           : Value(tempoPercent),
@@ -2840,18 +2383,6 @@ class SetEntry extends DataClass implements Insertable<SetEntry> {
       breakSeconds: breakSeconds == null && nullToAbsent
           ? const Value.absent()
           : Value(breakSeconds),
-      fadeOutSeconds: fadeOutSeconds == null && nullToAbsent
-          ? const Value.absent()
-          : Value(fadeOutSeconds),
-      breakCueMode: breakCueMode == null && nullToAbsent
-          ? const Value.absent()
-          : Value(breakCueMode),
-      beepLeadSeconds: beepLeadSeconds == null && nullToAbsent
-          ? const Value.absent()
-          : Value(beepLeadSeconds),
-      ambientSongId: ambientSongId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(ambientSongId),
     );
   }
 
@@ -2866,18 +2397,11 @@ class SetEntry extends DataClass implements Insertable<SetEntry> {
       sortIndex: serializer.fromJson<int>(json['sortIndex']),
       label: serializer.fromJson<String>(json['label']),
       playlistId: serializer.fromJson<String?>(json['playlistId']),
-      folderId: serializer.fromJson<String?>(json['folderId']),
-      selectionMode: serializer.fromJson<String>(json['selectionMode']),
-      lastPlayedSongId: serializer.fromJson<String?>(json['lastPlayedSongId']),
       tempoPercent: serializer.fromJson<int?>(json['tempoPercent']),
       playDurationSeconds: serializer.fromJson<int?>(
         json['playDurationSeconds'],
       ),
       breakSeconds: serializer.fromJson<int?>(json['breakSeconds']),
-      fadeOutSeconds: serializer.fromJson<int?>(json['fadeOutSeconds']),
-      breakCueMode: serializer.fromJson<String?>(json['breakCueMode']),
-      beepLeadSeconds: serializer.fromJson<int?>(json['beepLeadSeconds']),
-      ambientSongId: serializer.fromJson<String?>(json['ambientSongId']),
     );
   }
   @override
@@ -2889,16 +2413,9 @@ class SetEntry extends DataClass implements Insertable<SetEntry> {
       'sortIndex': serializer.toJson<int>(sortIndex),
       'label': serializer.toJson<String>(label),
       'playlistId': serializer.toJson<String?>(playlistId),
-      'folderId': serializer.toJson<String?>(folderId),
-      'selectionMode': serializer.toJson<String>(selectionMode),
-      'lastPlayedSongId': serializer.toJson<String?>(lastPlayedSongId),
       'tempoPercent': serializer.toJson<int?>(tempoPercent),
       'playDurationSeconds': serializer.toJson<int?>(playDurationSeconds),
       'breakSeconds': serializer.toJson<int?>(breakSeconds),
-      'fadeOutSeconds': serializer.toJson<int?>(fadeOutSeconds),
-      'breakCueMode': serializer.toJson<String?>(breakCueMode),
-      'beepLeadSeconds': serializer.toJson<int?>(beepLeadSeconds),
-      'ambientSongId': serializer.toJson<String?>(ambientSongId),
     };
   }
 
@@ -2908,42 +2425,20 @@ class SetEntry extends DataClass implements Insertable<SetEntry> {
     int? sortIndex,
     String? label,
     Value<String?> playlistId = const Value.absent(),
-    Value<String?> folderId = const Value.absent(),
-    String? selectionMode,
-    Value<String?> lastPlayedSongId = const Value.absent(),
     Value<int?> tempoPercent = const Value.absent(),
     Value<int?> playDurationSeconds = const Value.absent(),
     Value<int?> breakSeconds = const Value.absent(),
-    Value<int?> fadeOutSeconds = const Value.absent(),
-    Value<String?> breakCueMode = const Value.absent(),
-    Value<int?> beepLeadSeconds = const Value.absent(),
-    Value<String?> ambientSongId = const Value.absent(),
   }) => SetEntry(
     id: id ?? this.id,
     setId: setId ?? this.setId,
     sortIndex: sortIndex ?? this.sortIndex,
     label: label ?? this.label,
     playlistId: playlistId.present ? playlistId.value : this.playlistId,
-    folderId: folderId.present ? folderId.value : this.folderId,
-    selectionMode: selectionMode ?? this.selectionMode,
-    lastPlayedSongId: lastPlayedSongId.present
-        ? lastPlayedSongId.value
-        : this.lastPlayedSongId,
     tempoPercent: tempoPercent.present ? tempoPercent.value : this.tempoPercent,
     playDurationSeconds: playDurationSeconds.present
         ? playDurationSeconds.value
         : this.playDurationSeconds,
     breakSeconds: breakSeconds.present ? breakSeconds.value : this.breakSeconds,
-    fadeOutSeconds: fadeOutSeconds.present
-        ? fadeOutSeconds.value
-        : this.fadeOutSeconds,
-    breakCueMode: breakCueMode.present ? breakCueMode.value : this.breakCueMode,
-    beepLeadSeconds: beepLeadSeconds.present
-        ? beepLeadSeconds.value
-        : this.beepLeadSeconds,
-    ambientSongId: ambientSongId.present
-        ? ambientSongId.value
-        : this.ambientSongId,
   );
   SetEntry copyWithCompanion(SetEntriesCompanion data) {
     return SetEntry(
@@ -2954,13 +2449,6 @@ class SetEntry extends DataClass implements Insertable<SetEntry> {
       playlistId: data.playlistId.present
           ? data.playlistId.value
           : this.playlistId,
-      folderId: data.folderId.present ? data.folderId.value : this.folderId,
-      selectionMode: data.selectionMode.present
-          ? data.selectionMode.value
-          : this.selectionMode,
-      lastPlayedSongId: data.lastPlayedSongId.present
-          ? data.lastPlayedSongId.value
-          : this.lastPlayedSongId,
       tempoPercent: data.tempoPercent.present
           ? data.tempoPercent.value
           : this.tempoPercent,
@@ -2970,18 +2458,6 @@ class SetEntry extends DataClass implements Insertable<SetEntry> {
       breakSeconds: data.breakSeconds.present
           ? data.breakSeconds.value
           : this.breakSeconds,
-      fadeOutSeconds: data.fadeOutSeconds.present
-          ? data.fadeOutSeconds.value
-          : this.fadeOutSeconds,
-      breakCueMode: data.breakCueMode.present
-          ? data.breakCueMode.value
-          : this.breakCueMode,
-      beepLeadSeconds: data.beepLeadSeconds.present
-          ? data.beepLeadSeconds.value
-          : this.beepLeadSeconds,
-      ambientSongId: data.ambientSongId.present
-          ? data.ambientSongId.value
-          : this.ambientSongId,
     );
   }
 
@@ -2993,16 +2469,9 @@ class SetEntry extends DataClass implements Insertable<SetEntry> {
           ..write('sortIndex: $sortIndex, ')
           ..write('label: $label, ')
           ..write('playlistId: $playlistId, ')
-          ..write('folderId: $folderId, ')
-          ..write('selectionMode: $selectionMode, ')
-          ..write('lastPlayedSongId: $lastPlayedSongId, ')
           ..write('tempoPercent: $tempoPercent, ')
           ..write('playDurationSeconds: $playDurationSeconds, ')
-          ..write('breakSeconds: $breakSeconds, ')
-          ..write('fadeOutSeconds: $fadeOutSeconds, ')
-          ..write('breakCueMode: $breakCueMode, ')
-          ..write('beepLeadSeconds: $beepLeadSeconds, ')
-          ..write('ambientSongId: $ambientSongId')
+          ..write('breakSeconds: $breakSeconds')
           ..write(')'))
         .toString();
   }
@@ -3014,16 +2483,9 @@ class SetEntry extends DataClass implements Insertable<SetEntry> {
     sortIndex,
     label,
     playlistId,
-    folderId,
-    selectionMode,
-    lastPlayedSongId,
     tempoPercent,
     playDurationSeconds,
     breakSeconds,
-    fadeOutSeconds,
-    breakCueMode,
-    beepLeadSeconds,
-    ambientSongId,
   );
   @override
   bool operator ==(Object other) =>
@@ -3034,16 +2496,9 @@ class SetEntry extends DataClass implements Insertable<SetEntry> {
           other.sortIndex == this.sortIndex &&
           other.label == this.label &&
           other.playlistId == this.playlistId &&
-          other.folderId == this.folderId &&
-          other.selectionMode == this.selectionMode &&
-          other.lastPlayedSongId == this.lastPlayedSongId &&
           other.tempoPercent == this.tempoPercent &&
           other.playDurationSeconds == this.playDurationSeconds &&
-          other.breakSeconds == this.breakSeconds &&
-          other.fadeOutSeconds == this.fadeOutSeconds &&
-          other.breakCueMode == this.breakCueMode &&
-          other.beepLeadSeconds == this.beepLeadSeconds &&
-          other.ambientSongId == this.ambientSongId);
+          other.breakSeconds == this.breakSeconds);
 }
 
 class SetEntriesCompanion extends UpdateCompanion<SetEntry> {
@@ -3052,16 +2507,9 @@ class SetEntriesCompanion extends UpdateCompanion<SetEntry> {
   final Value<int> sortIndex;
   final Value<String> label;
   final Value<String?> playlistId;
-  final Value<String?> folderId;
-  final Value<String> selectionMode;
-  final Value<String?> lastPlayedSongId;
   final Value<int?> tempoPercent;
   final Value<int?> playDurationSeconds;
   final Value<int?> breakSeconds;
-  final Value<int?> fadeOutSeconds;
-  final Value<String?> breakCueMode;
-  final Value<int?> beepLeadSeconds;
-  final Value<String?> ambientSongId;
   final Value<int> rowid;
   const SetEntriesCompanion({
     this.id = const Value.absent(),
@@ -3069,16 +2517,9 @@ class SetEntriesCompanion extends UpdateCompanion<SetEntry> {
     this.sortIndex = const Value.absent(),
     this.label = const Value.absent(),
     this.playlistId = const Value.absent(),
-    this.folderId = const Value.absent(),
-    this.selectionMode = const Value.absent(),
-    this.lastPlayedSongId = const Value.absent(),
     this.tempoPercent = const Value.absent(),
     this.playDurationSeconds = const Value.absent(),
     this.breakSeconds = const Value.absent(),
-    this.fadeOutSeconds = const Value.absent(),
-    this.breakCueMode = const Value.absent(),
-    this.beepLeadSeconds = const Value.absent(),
-    this.ambientSongId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SetEntriesCompanion.insert({
@@ -3087,16 +2528,9 @@ class SetEntriesCompanion extends UpdateCompanion<SetEntry> {
     required int sortIndex,
     required String label,
     this.playlistId = const Value.absent(),
-    this.folderId = const Value.absent(),
-    this.selectionMode = const Value.absent(),
-    this.lastPlayedSongId = const Value.absent(),
     this.tempoPercent = const Value.absent(),
     this.playDurationSeconds = const Value.absent(),
     this.breakSeconds = const Value.absent(),
-    this.fadeOutSeconds = const Value.absent(),
-    this.breakCueMode = const Value.absent(),
-    this.beepLeadSeconds = const Value.absent(),
-    this.ambientSongId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        setId = Value(setId),
@@ -3108,16 +2542,9 @@ class SetEntriesCompanion extends UpdateCompanion<SetEntry> {
     Expression<int>? sortIndex,
     Expression<String>? label,
     Expression<String>? playlistId,
-    Expression<String>? folderId,
-    Expression<String>? selectionMode,
-    Expression<String>? lastPlayedSongId,
     Expression<int>? tempoPercent,
     Expression<int>? playDurationSeconds,
     Expression<int>? breakSeconds,
-    Expression<int>? fadeOutSeconds,
-    Expression<String>? breakCueMode,
-    Expression<int>? beepLeadSeconds,
-    Expression<String>? ambientSongId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3126,17 +2553,10 @@ class SetEntriesCompanion extends UpdateCompanion<SetEntry> {
       if (sortIndex != null) 'sort_index': sortIndex,
       if (label != null) 'label': label,
       if (playlistId != null) 'playlist_id': playlistId,
-      if (folderId != null) 'folder_id': folderId,
-      if (selectionMode != null) 'selection_mode': selectionMode,
-      if (lastPlayedSongId != null) 'last_played_song_id': lastPlayedSongId,
       if (tempoPercent != null) 'tempo_percent': tempoPercent,
       if (playDurationSeconds != null)
         'play_duration_seconds': playDurationSeconds,
       if (breakSeconds != null) 'break_seconds': breakSeconds,
-      if (fadeOutSeconds != null) 'fade_out_seconds': fadeOutSeconds,
-      if (breakCueMode != null) 'break_cue_mode': breakCueMode,
-      if (beepLeadSeconds != null) 'beep_lead_seconds': beepLeadSeconds,
-      if (ambientSongId != null) 'ambient_song_id': ambientSongId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3147,16 +2567,9 @@ class SetEntriesCompanion extends UpdateCompanion<SetEntry> {
     Value<int>? sortIndex,
     Value<String>? label,
     Value<String?>? playlistId,
-    Value<String?>? folderId,
-    Value<String>? selectionMode,
-    Value<String?>? lastPlayedSongId,
     Value<int?>? tempoPercent,
     Value<int?>? playDurationSeconds,
     Value<int?>? breakSeconds,
-    Value<int?>? fadeOutSeconds,
-    Value<String?>? breakCueMode,
-    Value<int?>? beepLeadSeconds,
-    Value<String?>? ambientSongId,
     Value<int>? rowid,
   }) {
     return SetEntriesCompanion(
@@ -3165,16 +2578,9 @@ class SetEntriesCompanion extends UpdateCompanion<SetEntry> {
       sortIndex: sortIndex ?? this.sortIndex,
       label: label ?? this.label,
       playlistId: playlistId ?? this.playlistId,
-      folderId: folderId ?? this.folderId,
-      selectionMode: selectionMode ?? this.selectionMode,
-      lastPlayedSongId: lastPlayedSongId ?? this.lastPlayedSongId,
       tempoPercent: tempoPercent ?? this.tempoPercent,
       playDurationSeconds: playDurationSeconds ?? this.playDurationSeconds,
       breakSeconds: breakSeconds ?? this.breakSeconds,
-      fadeOutSeconds: fadeOutSeconds ?? this.fadeOutSeconds,
-      breakCueMode: breakCueMode ?? this.breakCueMode,
-      beepLeadSeconds: beepLeadSeconds ?? this.beepLeadSeconds,
-      ambientSongId: ambientSongId ?? this.ambientSongId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3197,15 +2603,6 @@ class SetEntriesCompanion extends UpdateCompanion<SetEntry> {
     if (playlistId.present) {
       map['playlist_id'] = Variable<String>(playlistId.value);
     }
-    if (folderId.present) {
-      map['folder_id'] = Variable<String>(folderId.value);
-    }
-    if (selectionMode.present) {
-      map['selection_mode'] = Variable<String>(selectionMode.value);
-    }
-    if (lastPlayedSongId.present) {
-      map['last_played_song_id'] = Variable<String>(lastPlayedSongId.value);
-    }
     if (tempoPercent.present) {
       map['tempo_percent'] = Variable<int>(tempoPercent.value);
     }
@@ -3214,18 +2611,6 @@ class SetEntriesCompanion extends UpdateCompanion<SetEntry> {
     }
     if (breakSeconds.present) {
       map['break_seconds'] = Variable<int>(breakSeconds.value);
-    }
-    if (fadeOutSeconds.present) {
-      map['fade_out_seconds'] = Variable<int>(fadeOutSeconds.value);
-    }
-    if (breakCueMode.present) {
-      map['break_cue_mode'] = Variable<String>(breakCueMode.value);
-    }
-    if (beepLeadSeconds.present) {
-      map['beep_lead_seconds'] = Variable<int>(beepLeadSeconds.value);
-    }
-    if (ambientSongId.present) {
-      map['ambient_song_id'] = Variable<String>(ambientSongId.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -3241,16 +2626,9 @@ class SetEntriesCompanion extends UpdateCompanion<SetEntry> {
           ..write('sortIndex: $sortIndex, ')
           ..write('label: $label, ')
           ..write('playlistId: $playlistId, ')
-          ..write('folderId: $folderId, ')
-          ..write('selectionMode: $selectionMode, ')
-          ..write('lastPlayedSongId: $lastPlayedSongId, ')
           ..write('tempoPercent: $tempoPercent, ')
           ..write('playDurationSeconds: $playDurationSeconds, ')
           ..write('breakSeconds: $breakSeconds, ')
-          ..write('fadeOutSeconds: $fadeOutSeconds, ')
-          ..write('breakCueMode: $breakCueMode, ')
-          ..write('beepLeadSeconds: $beepLeadSeconds, ')
-          ..write('ambientSongId: $ambientSongId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3309,13 +2687,6 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       ),
       result: [TableUpdate('set_entries', kind: UpdateKind.delete)],
     ),
-    WritePropagation(
-      on: TableUpdateQuery.onTableName(
-        'bookmarked_folders',
-        limitUpdateKind: UpdateKind.delete,
-      ),
-      result: [TableUpdate('set_entries', kind: UpdateKind.delete)],
-    ),
   ]);
 }
 
@@ -3367,24 +2738,6 @@ final class $$BookmarkedFoldersTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
-
-  static MultiTypedResultKey<$SetEntriesTable, List<SetEntry>>
-  _setEntriesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.setEntries,
-    aliasName: 'bookmarked_folders__id__set_entries__folder_id',
-  );
-
-  $$SetEntriesTableProcessedTableManager get setEntriesRefs {
-    final manager = $$SetEntriesTableTableManager(
-      $_db,
-      $_db.setEntries,
-    ).filter((f) => f.folderId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_setEntriesRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
 }
 
 class $$BookmarkedFoldersTableFilterComposer
@@ -3432,31 +2785,6 @@ class $$BookmarkedFoldersTableFilterComposer
           }) => $$SongsTableFilterComposer(
             $db: $db,
             $table: $db.songs,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<bool> setEntriesRefs(
-    Expression<bool> Function($$SetEntriesTableFilterComposer f) f,
-  ) {
-    final $$SetEntriesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.setEntries,
-      getReferencedColumn: (t) => t.folderId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SetEntriesTableFilterComposer(
-            $db: $db,
-            $table: $db.setEntries,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -3544,31 +2872,6 @@ class $$BookmarkedFoldersTableAnnotationComposer
     );
     return f(composer);
   }
-
-  Expression<T> setEntriesRefs<T extends Object>(
-    Expression<T> Function($$SetEntriesTableAnnotationComposer a) f,
-  ) {
-    final $$SetEntriesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.setEntries,
-      getReferencedColumn: (t) => t.folderId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SetEntriesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.setEntries,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
 }
 
 class $$BookmarkedFoldersTableTableManager
@@ -3584,7 +2887,7 @@ class $$BookmarkedFoldersTableTableManager
           $$BookmarkedFoldersTableUpdateCompanionBuilder,
           (BookmarkedFolder, $$BookmarkedFoldersTableReferences),
           BookmarkedFolder,
-          PrefetchHooks Function({bool songsRefs, bool setEntriesRefs})
+          PrefetchHooks Function({bool songsRefs})
         > {
   $$BookmarkedFoldersTableTableManager(
     _$AppDatabase db,
@@ -3638,13 +2941,10 @@ class $$BookmarkedFoldersTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({songsRefs = false, setEntriesRefs = false}) {
+          prefetchHooksCallback: ({songsRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [
-                if (songsRefs) db.songs,
-                if (setEntriesRefs) db.setEntries,
-              ],
+              explicitlyWatchedTables: [if (songsRefs) db.songs],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
                 return [
@@ -3669,25 +2969,6 @@ class $$BookmarkedFoldersTableTableManager
                           ),
                       typedResults: items,
                     ),
-                  if (setEntriesRefs)
-                    await $_getPrefetchedData<
-                      BookmarkedFolder,
-                      $BookmarkedFoldersTable,
-                      SetEntry
-                    >(
-                      currentTable: table,
-                      referencedTable: $$BookmarkedFoldersTableReferences
-                          ._setEntriesRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$BookmarkedFoldersTableReferences(
-                            db,
-                            table,
-                            p0,
-                          ).setEntriesRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.folderId == item.id),
-                      typedResults: items,
-                    ),
                 ];
               },
             );
@@ -3708,7 +2989,7 @@ typedef $$BookmarkedFoldersTableProcessedTableManager =
       $$BookmarkedFoldersTableUpdateCompanionBuilder,
       (BookmarkedFolder, $$BookmarkedFoldersTableReferences),
       BookmarkedFolder,
-      PrefetchHooks Function({bool songsRefs, bool setEntriesRefs})
+      PrefetchHooks Function({bool songsRefs})
     >;
 typedef $$SongsTableCreateCompanionBuilder =
     SongsCompanion Function({
@@ -3778,43 +3059,6 @@ final class $$SongsTableReferences
     ).filter((f) => f.songId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_playlistSongsRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-
-  static MultiTypedResultKey<$PracticeSetsTable, List<PracticeSet>>
-  _practiceSetsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.practiceSets,
-    aliasName: 'songs__id__practice_sets__default_ambient_song_id',
-  );
-
-  $$PracticeSetsTableProcessedTableManager get practiceSetsRefs {
-    final manager = $$PracticeSetsTableTableManager($_db, $_db.practiceSets)
-        .filter(
-          (f) =>
-              f.defaultAmbientSongId.id.sqlEquals($_itemColumn<String>('id')!),
-        );
-
-    final cache = $_typedResult.readTableOrNull(_practiceSetsRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-
-  static MultiTypedResultKey<$SetEntriesTable, List<SetEntry>>
-  _setEntriesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-    db.setEntries,
-    aliasName: 'songs__id__set_entries__ambient_song_id',
-  );
-
-  $$SetEntriesTableProcessedTableManager get setEntriesRefs {
-    final manager = $$SetEntriesTableTableManager(
-      $_db,
-      $_db.setEntries,
-    ).filter((f) => f.ambientSongId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_setEntriesRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -3923,56 +3167,6 @@ class $$SongsTableFilterComposer extends Composer<_$AppDatabase, $SongsTable> {
           }) => $$PlaylistSongsTableFilterComposer(
             $db: $db,
             $table: $db.playlistSongs,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<bool> practiceSetsRefs(
-    Expression<bool> Function($$PracticeSetsTableFilterComposer f) f,
-  ) {
-    final $$PracticeSetsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.practiceSets,
-      getReferencedColumn: (t) => t.defaultAmbientSongId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$PracticeSetsTableFilterComposer(
-            $db: $db,
-            $table: $db.practiceSets,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<bool> setEntriesRefs(
-    Expression<bool> Function($$SetEntriesTableFilterComposer f) f,
-  ) {
-    final $$SetEntriesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.setEntries,
-      getReferencedColumn: (t) => t.ambientSongId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SetEntriesTableFilterComposer(
-            $db: $db,
-            $table: $db.setEntries,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -4167,56 +3361,6 @@ class $$SongsTableAnnotationComposer
     );
     return f(composer);
   }
-
-  Expression<T> practiceSetsRefs<T extends Object>(
-    Expression<T> Function($$PracticeSetsTableAnnotationComposer a) f,
-  ) {
-    final $$PracticeSetsTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.practiceSets,
-      getReferencedColumn: (t) => t.defaultAmbientSongId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$PracticeSetsTableAnnotationComposer(
-            $db: $db,
-            $table: $db.practiceSets,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<T> setEntriesRefs<T extends Object>(
-    Expression<T> Function($$SetEntriesTableAnnotationComposer a) f,
-  ) {
-    final $$SetEntriesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.setEntries,
-      getReferencedColumn: (t) => t.ambientSongId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SetEntriesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.setEntries,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
 }
 
 class $$SongsTableTableManager
@@ -4232,12 +3376,7 @@ class $$SongsTableTableManager
           $$SongsTableUpdateCompanionBuilder,
           (Song, $$SongsTableReferences),
           Song,
-          PrefetchHooks Function({
-            bool sourceFolderId,
-            bool playlistSongsRefs,
-            bool practiceSetsRefs,
-            bool setEntriesRefs,
-          })
+          PrefetchHooks Function({bool sourceFolderId, bool playlistSongsRefs})
         > {
   $$SongsTableTableManager(_$AppDatabase db, $SongsTable table)
     : super(
@@ -4317,18 +3456,11 @@ class $$SongsTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({
-                sourceFolderId = false,
-                playlistSongsRefs = false,
-                practiceSetsRefs = false,
-                setEntriesRefs = false,
-              }) {
+              ({sourceFolderId = false, playlistSongsRefs = false}) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (playlistSongsRefs) db.playlistSongs,
-                    if (practiceSetsRefs) db.practiceSets,
-                    if (setEntriesRefs) db.setEntries,
                   ],
                   addJoins:
                       <
@@ -4385,44 +3517,6 @@ class $$SongsTableTableManager
                               ),
                           typedResults: items,
                         ),
-                      if (practiceSetsRefs)
-                        await $_getPrefetchedData<
-                          Song,
-                          $SongsTable,
-                          PracticeSet
-                        >(
-                          currentTable: table,
-                          referencedTable: $$SongsTableReferences
-                              ._practiceSetsRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$SongsTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).practiceSetsRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.defaultAmbientSongId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
-                      if (setEntriesRefs)
-                        await $_getPrefetchedData<Song, $SongsTable, SetEntry>(
-                          currentTable: table,
-                          referencedTable: $$SongsTableReferences
-                              ._setEntriesRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$SongsTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).setEntriesRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.ambientSongId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
                     ];
                   },
                 );
@@ -4443,12 +3537,7 @@ typedef $$SongsTableProcessedTableManager =
       $$SongsTableUpdateCompanionBuilder,
       (Song, $$SongsTableReferences),
       Song,
-      PrefetchHooks Function({
-        bool sourceFolderId,
-        bool playlistSongsRefs,
-        bool practiceSetsRefs,
-        bool setEntriesRefs,
-      })
+      PrefetchHooks Function({bool sourceFolderId, bool playlistSongsRefs})
     >;
 typedef $$PlaylistsTableCreateCompanionBuilder =
     PlaylistsCompanion Function({
@@ -5186,10 +4275,6 @@ typedef $$PracticeSetsTableCreateCompanionBuilder =
       Value<int> defaultTempoPercent,
       Value<int> defaultPlayDurationSeconds,
       Value<int> defaultBreakSeconds,
-      Value<int> defaultFadeOutSeconds,
-      Value<String> defaultBreakCueMode,
-      Value<int> defaultBeepLeadSeconds,
-      Value<String?> defaultAmbientSongId,
       Value<bool> repeatEnabled,
       Value<DateTime> dateCreated,
       Value<int> rowid,
@@ -5201,10 +4286,6 @@ typedef $$PracticeSetsTableUpdateCompanionBuilder =
       Value<int> defaultTempoPercent,
       Value<int> defaultPlayDurationSeconds,
       Value<int> defaultBreakSeconds,
-      Value<int> defaultFadeOutSeconds,
-      Value<String> defaultBreakCueMode,
-      Value<int> defaultBeepLeadSeconds,
-      Value<String?> defaultAmbientSongId,
       Value<bool> repeatEnabled,
       Value<DateTime> dateCreated,
       Value<int> rowid,
@@ -5213,25 +4294,6 @@ typedef $$PracticeSetsTableUpdateCompanionBuilder =
 final class $$PracticeSetsTableReferences
     extends BaseReferences<_$AppDatabase, $PracticeSetsTable, PracticeSet> {
   $$PracticeSetsTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static $SongsTable _defaultAmbientSongIdTable(_$AppDatabase db) =>
-      db.songs.createAlias('practice_sets__default_ambient_song_id__songs__id');
-
-  $$SongsTableProcessedTableManager? get defaultAmbientSongId {
-    final $_column = $_itemColumn<String>('default_ambient_song_id');
-    if ($_column == null) return null;
-    final manager = $$SongsTableTableManager(
-      $_db,
-      $_db.songs,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(
-      _defaultAmbientSongIdTable($_db),
-    );
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
 
   static MultiTypedResultKey<$SetEntriesTable, List<SetEntry>>
   _setEntriesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
@@ -5286,21 +4348,6 @@ class $$PracticeSetsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get defaultFadeOutSeconds => $composableBuilder(
-    column: $table.defaultFadeOutSeconds,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get defaultBreakCueMode => $composableBuilder(
-    column: $table.defaultBreakCueMode,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get defaultBeepLeadSeconds => $composableBuilder(
-    column: $table.defaultBeepLeadSeconds,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<bool> get repeatEnabled => $composableBuilder(
     column: $table.repeatEnabled,
     builder: (column) => ColumnFilters(column),
@@ -5310,29 +4357,6 @@ class $$PracticeSetsTableFilterComposer
     column: $table.dateCreated,
     builder: (column) => ColumnFilters(column),
   );
-
-  $$SongsTableFilterComposer get defaultAmbientSongId {
-    final $$SongsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.defaultAmbientSongId,
-      referencedTable: $db.songs,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SongsTableFilterComposer(
-            $db: $db,
-            $table: $db.songs,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 
   Expression<bool> setEntriesRefs(
     Expression<bool> Function($$SetEntriesTableFilterComposer f) f,
@@ -5394,21 +4418,6 @@ class $$PracticeSetsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get defaultFadeOutSeconds => $composableBuilder(
-    column: $table.defaultFadeOutSeconds,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get defaultBreakCueMode => $composableBuilder(
-    column: $table.defaultBreakCueMode,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get defaultBeepLeadSeconds => $composableBuilder(
-    column: $table.defaultBeepLeadSeconds,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<bool> get repeatEnabled => $composableBuilder(
     column: $table.repeatEnabled,
     builder: (column) => ColumnOrderings(column),
@@ -5418,29 +4427,6 @@ class $$PracticeSetsTableOrderingComposer
     column: $table.dateCreated,
     builder: (column) => ColumnOrderings(column),
   );
-
-  $$SongsTableOrderingComposer get defaultAmbientSongId {
-    final $$SongsTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.defaultAmbientSongId,
-      referencedTable: $db.songs,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SongsTableOrderingComposer(
-            $db: $db,
-            $table: $db.songs,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$PracticeSetsTableAnnotationComposer
@@ -5473,21 +4459,6 @@ class $$PracticeSetsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<int> get defaultFadeOutSeconds => $composableBuilder(
-    column: $table.defaultFadeOutSeconds,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get defaultBreakCueMode => $composableBuilder(
-    column: $table.defaultBreakCueMode,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get defaultBeepLeadSeconds => $composableBuilder(
-    column: $table.defaultBeepLeadSeconds,
-    builder: (column) => column,
-  );
-
   GeneratedColumn<bool> get repeatEnabled => $composableBuilder(
     column: $table.repeatEnabled,
     builder: (column) => column,
@@ -5497,29 +4468,6 @@ class $$PracticeSetsTableAnnotationComposer
     column: $table.dateCreated,
     builder: (column) => column,
   );
-
-  $$SongsTableAnnotationComposer get defaultAmbientSongId {
-    final $$SongsTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.defaultAmbientSongId,
-      referencedTable: $db.songs,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SongsTableAnnotationComposer(
-            $db: $db,
-            $table: $db.songs,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 
   Expression<T> setEntriesRefs<T extends Object>(
     Expression<T> Function($$SetEntriesTableAnnotationComposer a) f,
@@ -5560,10 +4508,7 @@ class $$PracticeSetsTableTableManager
           $$PracticeSetsTableUpdateCompanionBuilder,
           (PracticeSet, $$PracticeSetsTableReferences),
           PracticeSet,
-          PrefetchHooks Function({
-            bool defaultAmbientSongId,
-            bool setEntriesRefs,
-          })
+          PrefetchHooks Function({bool setEntriesRefs})
         > {
   $$PracticeSetsTableTableManager(_$AppDatabase db, $PracticeSetsTable table)
     : super(
@@ -5583,10 +4528,6 @@ class $$PracticeSetsTableTableManager
                 Value<int> defaultTempoPercent = const Value.absent(),
                 Value<int> defaultPlayDurationSeconds = const Value.absent(),
                 Value<int> defaultBreakSeconds = const Value.absent(),
-                Value<int> defaultFadeOutSeconds = const Value.absent(),
-                Value<String> defaultBreakCueMode = const Value.absent(),
-                Value<int> defaultBeepLeadSeconds = const Value.absent(),
-                Value<String?> defaultAmbientSongId = const Value.absent(),
                 Value<bool> repeatEnabled = const Value.absent(),
                 Value<DateTime> dateCreated = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -5596,10 +4537,6 @@ class $$PracticeSetsTableTableManager
                 defaultTempoPercent: defaultTempoPercent,
                 defaultPlayDurationSeconds: defaultPlayDurationSeconds,
                 defaultBreakSeconds: defaultBreakSeconds,
-                defaultFadeOutSeconds: defaultFadeOutSeconds,
-                defaultBreakCueMode: defaultBreakCueMode,
-                defaultBeepLeadSeconds: defaultBeepLeadSeconds,
-                defaultAmbientSongId: defaultAmbientSongId,
                 repeatEnabled: repeatEnabled,
                 dateCreated: dateCreated,
                 rowid: rowid,
@@ -5611,10 +4548,6 @@ class $$PracticeSetsTableTableManager
                 Value<int> defaultTempoPercent = const Value.absent(),
                 Value<int> defaultPlayDurationSeconds = const Value.absent(),
                 Value<int> defaultBreakSeconds = const Value.absent(),
-                Value<int> defaultFadeOutSeconds = const Value.absent(),
-                Value<String> defaultBreakCueMode = const Value.absent(),
-                Value<int> defaultBeepLeadSeconds = const Value.absent(),
-                Value<String?> defaultAmbientSongId = const Value.absent(),
                 Value<bool> repeatEnabled = const Value.absent(),
                 Value<DateTime> dateCreated = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -5624,10 +4557,6 @@ class $$PracticeSetsTableTableManager
                 defaultTempoPercent: defaultTempoPercent,
                 defaultPlayDurationSeconds: defaultPlayDurationSeconds,
                 defaultBreakSeconds: defaultBreakSeconds,
-                defaultFadeOutSeconds: defaultFadeOutSeconds,
-                defaultBreakCueMode: defaultBreakCueMode,
-                defaultBeepLeadSeconds: defaultBeepLeadSeconds,
-                defaultAmbientSongId: defaultAmbientSongId,
                 repeatEnabled: repeatEnabled,
                 dateCreated: dateCreated,
                 rowid: rowid,
@@ -5640,72 +4569,36 @@ class $$PracticeSetsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback:
-              ({defaultAmbientSongId = false, setEntriesRefs = false}) {
-                return PrefetchHooks(
-                  db: db,
-                  explicitlyWatchedTables: [if (setEntriesRefs) db.setEntries],
-                  addJoins:
-                      <
-                        T extends TableManagerState<
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic
-                        >
-                      >(state) {
-                        if (defaultAmbientSongId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.defaultAmbientSongId,
-                                    referencedTable:
-                                        $$PracticeSetsTableReferences
-                                            ._defaultAmbientSongIdTable(db),
-                                    referencedColumn:
-                                        $$PracticeSetsTableReferences
-                                            ._defaultAmbientSongIdTable(db)
-                                            .id,
-                                  )
-                                  as T;
-                        }
-
-                        return state;
-                      },
-                  getPrefetchedDataCallback: (items) async {
-                    return [
-                      if (setEntriesRefs)
-                        await $_getPrefetchedData<
-                          PracticeSet,
-                          $PracticeSetsTable,
-                          SetEntry
-                        >(
-                          currentTable: table,
-                          referencedTable: $$PracticeSetsTableReferences
-                              ._setEntriesRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$PracticeSetsTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).setEntriesRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.setId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
-                    ];
-                  },
-                );
+          prefetchHooksCallback: ({setEntriesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [if (setEntriesRefs) db.setEntries],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (setEntriesRefs)
+                    await $_getPrefetchedData<
+                      PracticeSet,
+                      $PracticeSetsTable,
+                      SetEntry
+                    >(
+                      currentTable: table,
+                      referencedTable: $$PracticeSetsTableReferences
+                          ._setEntriesRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$PracticeSetsTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).setEntriesRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.setId == item.id),
+                      typedResults: items,
+                    ),
+                ];
               },
+            );
+          },
         ),
       );
 }
@@ -5722,7 +4615,7 @@ typedef $$PracticeSetsTableProcessedTableManager =
       $$PracticeSetsTableUpdateCompanionBuilder,
       (PracticeSet, $$PracticeSetsTableReferences),
       PracticeSet,
-      PrefetchHooks Function({bool defaultAmbientSongId, bool setEntriesRefs})
+      PrefetchHooks Function({bool setEntriesRefs})
     >;
 typedef $$SetEntriesTableCreateCompanionBuilder =
     SetEntriesCompanion Function({
@@ -5731,16 +4624,9 @@ typedef $$SetEntriesTableCreateCompanionBuilder =
       required int sortIndex,
       required String label,
       Value<String?> playlistId,
-      Value<String?> folderId,
-      Value<String> selectionMode,
-      Value<String?> lastPlayedSongId,
       Value<int?> tempoPercent,
       Value<int?> playDurationSeconds,
       Value<int?> breakSeconds,
-      Value<int?> fadeOutSeconds,
-      Value<String?> breakCueMode,
-      Value<int?> beepLeadSeconds,
-      Value<String?> ambientSongId,
       Value<int> rowid,
     });
 typedef $$SetEntriesTableUpdateCompanionBuilder =
@@ -5750,16 +4636,9 @@ typedef $$SetEntriesTableUpdateCompanionBuilder =
       Value<int> sortIndex,
       Value<String> label,
       Value<String?> playlistId,
-      Value<String?> folderId,
-      Value<String> selectionMode,
-      Value<String?> lastPlayedSongId,
       Value<int?> tempoPercent,
       Value<int?> playDurationSeconds,
       Value<int?> breakSeconds,
-      Value<int?> fadeOutSeconds,
-      Value<String?> breakCueMode,
-      Value<int?> beepLeadSeconds,
-      Value<String?> ambientSongId,
       Value<int> rowid,
     });
 
@@ -5800,41 +4679,6 @@ final class $$SetEntriesTableReferences
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
-
-  static $BookmarkedFoldersTable _folderIdTable(_$AppDatabase db) => db
-      .bookmarkedFolders
-      .createAlias('set_entries__folder_id__bookmarked_folders__id');
-
-  $$BookmarkedFoldersTableProcessedTableManager? get folderId {
-    final $_column = $_itemColumn<String>('folder_id');
-    if ($_column == null) return null;
-    final manager = $$BookmarkedFoldersTableTableManager(
-      $_db,
-      $_db.bookmarkedFolders,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_folderIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-
-  static $SongsTable _ambientSongIdTable(_$AppDatabase db) =>
-      db.songs.createAlias('set_entries__ambient_song_id__songs__id');
-
-  $$SongsTableProcessedTableManager? get ambientSongId {
-    final $_column = $_itemColumn<String>('ambient_song_id');
-    if ($_column == null) return null;
-    final manager = $$SongsTableTableManager(
-      $_db,
-      $_db.songs,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_ambientSongIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
 }
 
 class $$SetEntriesTableFilterComposer
@@ -5861,16 +4705,6 @@ class $$SetEntriesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get selectionMode => $composableBuilder(
-    column: $table.selectionMode,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get lastPlayedSongId => $composableBuilder(
-    column: $table.lastPlayedSongId,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<int> get tempoPercent => $composableBuilder(
     column: $table.tempoPercent,
     builder: (column) => ColumnFilters(column),
@@ -5883,21 +4717,6 @@ class $$SetEntriesTableFilterComposer
 
   ColumnFilters<int> get breakSeconds => $composableBuilder(
     column: $table.breakSeconds,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get fadeOutSeconds => $composableBuilder(
-    column: $table.fadeOutSeconds,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get breakCueMode => $composableBuilder(
-    column: $table.breakCueMode,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get beepLeadSeconds => $composableBuilder(
-    column: $table.beepLeadSeconds,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5946,52 +4765,6 @@ class $$SetEntriesTableFilterComposer
     );
     return composer;
   }
-
-  $$BookmarkedFoldersTableFilterComposer get folderId {
-    final $$BookmarkedFoldersTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.folderId,
-      referencedTable: $db.bookmarkedFolders,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$BookmarkedFoldersTableFilterComposer(
-            $db: $db,
-            $table: $db.bookmarkedFolders,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$SongsTableFilterComposer get ambientSongId {
-    final $$SongsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.ambientSongId,
-      referencedTable: $db.songs,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SongsTableFilterComposer(
-            $db: $db,
-            $table: $db.songs,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$SetEntriesTableOrderingComposer
@@ -6018,16 +4791,6 @@ class $$SetEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get selectionMode => $composableBuilder(
-    column: $table.selectionMode,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get lastPlayedSongId => $composableBuilder(
-    column: $table.lastPlayedSongId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<int> get tempoPercent => $composableBuilder(
     column: $table.tempoPercent,
     builder: (column) => ColumnOrderings(column),
@@ -6040,21 +4803,6 @@ class $$SetEntriesTableOrderingComposer
 
   ColumnOrderings<int> get breakSeconds => $composableBuilder(
     column: $table.breakSeconds,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get fadeOutSeconds => $composableBuilder(
-    column: $table.fadeOutSeconds,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get breakCueMode => $composableBuilder(
-    column: $table.breakCueMode,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get beepLeadSeconds => $composableBuilder(
-    column: $table.beepLeadSeconds,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -6103,52 +4851,6 @@ class $$SetEntriesTableOrderingComposer
     );
     return composer;
   }
-
-  $$BookmarkedFoldersTableOrderingComposer get folderId {
-    final $$BookmarkedFoldersTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.folderId,
-      referencedTable: $db.bookmarkedFolders,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$BookmarkedFoldersTableOrderingComposer(
-            $db: $db,
-            $table: $db.bookmarkedFolders,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
-  $$SongsTableOrderingComposer get ambientSongId {
-    final $$SongsTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.ambientSongId,
-      referencedTable: $db.songs,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SongsTableOrderingComposer(
-            $db: $db,
-            $table: $db.songs,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$SetEntriesTableAnnotationComposer
@@ -6169,16 +4871,6 @@ class $$SetEntriesTableAnnotationComposer
   GeneratedColumn<String> get label =>
       $composableBuilder(column: $table.label, builder: (column) => column);
 
-  GeneratedColumn<String> get selectionMode => $composableBuilder(
-    column: $table.selectionMode,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get lastPlayedSongId => $composableBuilder(
-    column: $table.lastPlayedSongId,
-    builder: (column) => column,
-  );
-
   GeneratedColumn<int> get tempoPercent => $composableBuilder(
     column: $table.tempoPercent,
     builder: (column) => column,
@@ -6191,21 +4883,6 @@ class $$SetEntriesTableAnnotationComposer
 
   GeneratedColumn<int> get breakSeconds => $composableBuilder(
     column: $table.breakSeconds,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get fadeOutSeconds => $composableBuilder(
-    column: $table.fadeOutSeconds,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get breakCueMode => $composableBuilder(
-    column: $table.breakCueMode,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get beepLeadSeconds => $composableBuilder(
-    column: $table.beepLeadSeconds,
     builder: (column) => column,
   );
 
@@ -6254,53 +4931,6 @@ class $$SetEntriesTableAnnotationComposer
     );
     return composer;
   }
-
-  $$BookmarkedFoldersTableAnnotationComposer get folderId {
-    final $$BookmarkedFoldersTableAnnotationComposer composer =
-        $composerBuilder(
-          composer: this,
-          getCurrentColumn: (t) => t.folderId,
-          referencedTable: $db.bookmarkedFolders,
-          getReferencedColumn: (t) => t.id,
-          builder:
-              (
-                joinBuilder, {
-                $addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer,
-              }) => $$BookmarkedFoldersTableAnnotationComposer(
-                $db: $db,
-                $table: $db.bookmarkedFolders,
-                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-                joinBuilder: joinBuilder,
-                $removeJoinBuilderFromRootComposer:
-                    $removeJoinBuilderFromRootComposer,
-              ),
-        );
-    return composer;
-  }
-
-  $$SongsTableAnnotationComposer get ambientSongId {
-    final $$SongsTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.ambientSongId,
-      referencedTable: $db.songs,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SongsTableAnnotationComposer(
-            $db: $db,
-            $table: $db.songs,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 }
 
 class $$SetEntriesTableTableManager
@@ -6316,12 +4946,7 @@ class $$SetEntriesTableTableManager
           $$SetEntriesTableUpdateCompanionBuilder,
           (SetEntry, $$SetEntriesTableReferences),
           SetEntry,
-          PrefetchHooks Function({
-            bool setId,
-            bool playlistId,
-            bool folderId,
-            bool ambientSongId,
-          })
+          PrefetchHooks Function({bool setId, bool playlistId})
         > {
   $$SetEntriesTableTableManager(_$AppDatabase db, $SetEntriesTable table)
     : super(
@@ -6341,16 +4966,9 @@ class $$SetEntriesTableTableManager
                 Value<int> sortIndex = const Value.absent(),
                 Value<String> label = const Value.absent(),
                 Value<String?> playlistId = const Value.absent(),
-                Value<String?> folderId = const Value.absent(),
-                Value<String> selectionMode = const Value.absent(),
-                Value<String?> lastPlayedSongId = const Value.absent(),
                 Value<int?> tempoPercent = const Value.absent(),
                 Value<int?> playDurationSeconds = const Value.absent(),
                 Value<int?> breakSeconds = const Value.absent(),
-                Value<int?> fadeOutSeconds = const Value.absent(),
-                Value<String?> breakCueMode = const Value.absent(),
-                Value<int?> beepLeadSeconds = const Value.absent(),
-                Value<String?> ambientSongId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SetEntriesCompanion(
                 id: id,
@@ -6358,16 +4976,9 @@ class $$SetEntriesTableTableManager
                 sortIndex: sortIndex,
                 label: label,
                 playlistId: playlistId,
-                folderId: folderId,
-                selectionMode: selectionMode,
-                lastPlayedSongId: lastPlayedSongId,
                 tempoPercent: tempoPercent,
                 playDurationSeconds: playDurationSeconds,
                 breakSeconds: breakSeconds,
-                fadeOutSeconds: fadeOutSeconds,
-                breakCueMode: breakCueMode,
-                beepLeadSeconds: beepLeadSeconds,
-                ambientSongId: ambientSongId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6377,16 +4988,9 @@ class $$SetEntriesTableTableManager
                 required int sortIndex,
                 required String label,
                 Value<String?> playlistId = const Value.absent(),
-                Value<String?> folderId = const Value.absent(),
-                Value<String> selectionMode = const Value.absent(),
-                Value<String?> lastPlayedSongId = const Value.absent(),
                 Value<int?> tempoPercent = const Value.absent(),
                 Value<int?> playDurationSeconds = const Value.absent(),
                 Value<int?> breakSeconds = const Value.absent(),
-                Value<int?> fadeOutSeconds = const Value.absent(),
-                Value<String?> breakCueMode = const Value.absent(),
-                Value<int?> beepLeadSeconds = const Value.absent(),
-                Value<String?> ambientSongId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SetEntriesCompanion.insert(
                 id: id,
@@ -6394,16 +4998,9 @@ class $$SetEntriesTableTableManager
                 sortIndex: sortIndex,
                 label: label,
                 playlistId: playlistId,
-                folderId: folderId,
-                selectionMode: selectionMode,
-                lastPlayedSongId: lastPlayedSongId,
                 tempoPercent: tempoPercent,
                 playDurationSeconds: playDurationSeconds,
                 breakSeconds: breakSeconds,
-                fadeOutSeconds: fadeOutSeconds,
-                breakCueMode: breakCueMode,
-                beepLeadSeconds: beepLeadSeconds,
-                ambientSongId: ambientSongId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -6414,96 +5011,60 @@ class $$SetEntriesTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback:
-              ({
-                setId = false,
-                playlistId = false,
-                folderId = false,
-                ambientSongId = false,
-              }) {
-                return PrefetchHooks(
-                  db: db,
-                  explicitlyWatchedTables: [],
-                  addJoins:
-                      <
-                        T extends TableManagerState<
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic
-                        >
-                      >(state) {
-                        if (setId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.setId,
-                                    referencedTable: $$SetEntriesTableReferences
-                                        ._setIdTable(db),
-                                    referencedColumn:
-                                        $$SetEntriesTableReferences
-                                            ._setIdTable(db)
-                                            .id,
-                                  )
-                                  as T;
-                        }
-                        if (playlistId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.playlistId,
-                                    referencedTable: $$SetEntriesTableReferences
-                                        ._playlistIdTable(db),
-                                    referencedColumn:
-                                        $$SetEntriesTableReferences
-                                            ._playlistIdTable(db)
-                                            .id,
-                                  )
-                                  as T;
-                        }
-                        if (folderId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.folderId,
-                                    referencedTable: $$SetEntriesTableReferences
-                                        ._folderIdTable(db),
-                                    referencedColumn:
-                                        $$SetEntriesTableReferences
-                                            ._folderIdTable(db)
-                                            .id,
-                                  )
-                                  as T;
-                        }
-                        if (ambientSongId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.ambientSongId,
-                                    referencedTable: $$SetEntriesTableReferences
-                                        ._ambientSongIdTable(db),
-                                    referencedColumn:
-                                        $$SetEntriesTableReferences
-                                            ._ambientSongIdTable(db)
-                                            .id,
-                                  )
-                                  as T;
-                        }
+          prefetchHooksCallback: ({setId = false, playlistId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (setId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.setId,
+                                referencedTable: $$SetEntriesTableReferences
+                                    ._setIdTable(db),
+                                referencedColumn: $$SetEntriesTableReferences
+                                    ._setIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+                    if (playlistId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.playlistId,
+                                referencedTable: $$SetEntriesTableReferences
+                                    ._playlistIdTable(db),
+                                referencedColumn: $$SetEntriesTableReferences
+                                    ._playlistIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
 
-                        return state;
-                      },
-                  getPrefetchedDataCallback: (items) async {
-                    return [];
+                    return state;
                   },
-                );
+              getPrefetchedDataCallback: (items) async {
+                return [];
               },
+            );
+          },
         ),
       );
 }
@@ -6520,12 +5081,7 @@ typedef $$SetEntriesTableProcessedTableManager =
       $$SetEntriesTableUpdateCompanionBuilder,
       (SetEntry, $$SetEntriesTableReferences),
       SetEntry,
-      PrefetchHooks Function({
-        bool setId,
-        bool playlistId,
-        bool folderId,
-        bool ambientSongId,
-      })
+      PrefetchHooks Function({bool setId, bool playlistId})
     >;
 
 class $AppDatabaseManager {
