@@ -81,10 +81,16 @@ class AudioPlayerHandler {
   /// Embedded cover art for whichever track is currently loaded, read
   /// straight off the file by the engine itself - correct immediately, even
   /// for tracks imported before `FileImportService` started extracting and
-  /// caching artwork at import time. Emits once per file load: the art's
-  /// raw bytes, or null if that file has none.
-  Stream<Uint8List?> get coverArtStream =>
-      _player.stream.coverArt.map((art) => art?.bytes);
+  /// caching artwork at import time. The underlying `mpv_audio_kit` stream
+  /// only emits once per file load, so a subscriber that starts listening
+  /// after the current track already loaded (e.g. reopening the player via
+  /// the mini-player, which creates a fresh `StreamBuilder`) would
+  /// otherwise never see it - seed with `_player.state.coverArt`, which
+  /// always holds the last-emitted value, before following the live stream.
+  Stream<Uint8List?> get coverArtStream async* {
+    yield _player.state.coverArt?.bytes;
+    yield* _player.stream.coverArt.map((art) => art?.bytes);
+  }
 
   /// Mirrors `playWhenReady` (the user's intent to play), not the momentary
   /// `playing` flag, which can flicker false during brief buffering/seeks -
@@ -160,6 +166,35 @@ class AudioPlayerHandler {
         await _player.setPitchCorrection(true);
         await _player.setRate(factor);
     }
+  }
+
+  /// Works around an mpv/Rubber Band quirk (undocumented, and not surfaced
+  /// as any event `mpv_audio_kit` exposes) where seeking can silently
+  /// reset the filter's live tempo back to whatever it was set to when the
+  /// track was loaded - audible, but invisible to the app, since our tempo
+  /// slider only ever reflects [_tempoPercent], not what the native filter
+  /// is actually doing.
+  ///
+  /// Simply re-calling [_applyTempo] wouldn't fix this: `updateAudioEffects`
+  /// no-ops whenever the requested bundle already equals its own
+  /// last-known state, which is exactly the (now-stale) state it still
+  /// thinks is live. Toggling the filter off then back on forces two
+  /// genuine writes, landing the tempo again for real. Only Rubber Band is
+  /// affected - scaletempo2's tempo lives in mpv's native `speed`
+  /// property, set fresh on every seek regardless, so it never drifts.
+  Future<void> _reapplyTempoAfterSeek() async {
+    if (_tempoAlgorithm != TempoAlgorithm.rubberband) return;
+    final factor = _tempoPercent / 100.0;
+    await _player.updateAudioEffects(
+      (e) => e.copyWith(
+        rubberband: mak.RubberbandSettings(enabled: false, tempo: factor),
+      ),
+    );
+    await _player.updateAudioEffects(
+      (e) => e.copyWith(
+        rubberband: mak.RubberbandSettings(enabled: true, tempo: factor),
+      ),
+    );
   }
 
   /// Target integrated loudness for normalization, in LUFS - matches
@@ -307,7 +342,13 @@ class AudioPlayerHandler {
 
   Future<void> stop() => _player.stop();
 
-  Future<void> seek(Duration position) => _player.seek(position);
+  /// Seeking can silently reset the Rubber Band filter's runtime tempo
+  /// back to whatever it was when the track loaded, with no event we can
+  /// observe to know it happened - see [_reapplyTempoAfterSeek].
+  Future<void> seek(Duration position) async {
+    await _player.seek(position);
+    await _reapplyTempoAfterSeek();
+  }
 
   /// Linearly fades volume to 0 over [duration], then stops playback and
   /// restores volume to full for the next track. Used for the "hard
