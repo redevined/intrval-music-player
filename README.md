@@ -1,12 +1,27 @@
-# intrval
+<div align="center">
+  <img src="resources/icon.png" alt="intrval icon" width="140" />
 
-A tempo-controlled, practice-set music player for dancers. Build ordered
-"practice sets" out of your playlists/folders, play a random (or sequential)
-song from each in turn, with per-entry control over tempo, play duration
-(with fade-out), break time, and break audio cues.
+  # intrval
+
+  A tempo-controlled, practice-set music player for dancers.
+</div>
+
+Build ordered "practice sets" out of your playlists/folders, play a random
+(or sequential) song from each in turn, with per-entry control over tempo,
+play duration (with fade-out), break time, and break audio cues.
 
 **Platform status: Android only.** See
 [`docs/IOS_ROADMAP.md`](docs/IOS_ROADMAP.md) for what's missing for iOS.
+
+## Screenshots
+
+<p align="center">
+  <img src="resources/screenshot_02_library.png" alt="Library" width="180" />
+  <img src="resources/screenshot_01_player.png" alt="Player with tempo control" width="180" />
+  <img src="resources/screenshot_03_sets.png" alt="Practice sets" width="180" />
+  <img src="resources/screenshot_04_final.png" alt="A practice set's entries" width="180" />
+  <img src="resources/screenshot_05_edit.png" alt="Editing a set entry" width="180" />
+</p>
 
 ## Features
 
@@ -14,13 +29,23 @@ song from each in turn, with per-entry control over tempo, play duration
   top to bottom with configurable tempo, play and break duration,
   overridable per entry.
 - **Standard Player** - play any song, playlist, or folder on demand, with
-  the same pitch-preserving tempo control (70%-130%, 1% steps).
+  the same pitch-preserving tempo control (70%-130%, 1% steps) via a
+  choice of two DSP algorithms (Rubber Band or mpv's scaletempo2).
 - **Playlists** - create, reorder, and manage hand-picked song lists.
-- **Library** - import and play local music, with search/sort/filter, including by BPM.
+- **Library** - import and play local music, with search/sort/filter
+  (including by BPM), favorites, and hide/unhide.
 - **On-device BPM detection** - no network calls; estimates tempo via
   amplitude-envelope autocorrelation, with manual override/correction.
-- **Background playback** - lock-screen/notification media controls via
-  `audio_service`.
+- **Break cues** - silence, a beep before the next song, or a looping
+  ambient audio track, with adjustable volume.
+- **Loudness controls** - an overall volume boost beyond the device's
+  normal maximum, and optional per-track loudness normalization so songs
+  don't jump in volume between each other.
+- **Background playback** - lock-screen/notification media controls, plus
+  live cover art read straight from each track's embedded tags.
+- **Material You theming** - follows the device's dynamic color palette on
+  Android 12+, with a few alternate seed colors (and a monochrome mode) as
+  an easter egg.
 
 ## Tech stack
 
@@ -30,9 +55,11 @@ song from each in turn, with per-entry control over tempo, play duration
 | State management | `flutter_riverpod` |
 | Local database | `drift` (SQLite) |
 | Folder access | `saf` (Android Storage Access Framework) |
-| Audio playback | `just_audio` + `audio_service` + `audio_session` |
-| Tag reading | `audiotags` |
+| Audio playback | `mpv_audio_kit` (libmpv + Rubber Band time-stretching) |
+| Tag reading | `audio_metadata_reader` |
 | BPM detection | `just_waveform` (amplitude envelope) + custom autocorrelation |
+| Settings persistence | `shared_preferences` |
+| Theming | `dynamic_color` + `material_color_utilities` (Material You) |
 
 See [`docs/adr/`](docs/adr) for the reasoning behind these choices.
 
@@ -40,14 +67,14 @@ See [`docs/adr/`](docs/adr) for the reasoning behind these choices.
 
 ```
 lib/
-  core/            App-wide constants and theme.
+  core/            App-wide constants, formatting helpers, and theme.
   data/
     database/      Drift schema (tables.dart) and database class.
-    repositories/   CRUD + query logic per entity (songs, playlists, folders, sets).
+    repositories/   CRUD + query logic per entity (songs, playlists, folders, sets, settings).
     providers.dart  Riverpod wiring for db/repositories/services.
-  services/        File import, BPM detection, audio playback (audio_service handler).
+  services/        File import, BPM detection, audio playback (mpv_audio_kit wrapper), library scanning.
   features/        One folder per screen area: library, playlists, sets, player, settings.
-  widgets/         Shared widgets (song tile, BPM edit dialog, tempo slider).
+  widgets/         Shared widgets (song tile, song menu, seek bar, tempo slider, dialogs).
 ```
 
 ## Getting started
