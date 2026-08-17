@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="resources/icon.png" alt="intrval icon" width="140" />
+  <img src="resources/icon.png" alt="intrval icon" width="120" />
 
   # intrval
 
@@ -16,9 +16,11 @@ play duration (with fade-out), break time, and break audio cues.
 ## Screenshots
 
 <p align="center">
-  <img src="resources/screenshot_02_library.png" alt="Library" width="180" />
   <img src="resources/screenshot_01_player.png" alt="Player with tempo control" width="180" />
+  <img src="resources/screenshot_02_library.png" alt="Library" width="180" />
   <img src="resources/screenshot_03_sets.png" alt="Practice sets" width="180" />
+</p>
+<p align="center">
   <img src="resources/screenshot_04_final.png" alt="A practice set's entries" width="180" />
   <img src="resources/screenshot_05_edit.png" alt="Editing a set entry" width="180" />
 </p>
