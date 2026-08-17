@@ -298,15 +298,21 @@ class SetBuilderScreen extends ConsumerWidget {
                     divisions: 24,
                     onChanged: (v) => setState(() => brk = v.round()),
                   ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Repeat'),
-                    subtitle: const Text(
-                      'Loop back to the first entry after the last one, '
-                      'indefinitely',
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Repeat',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                        Switch(
+                          value: repeat,
+                          onChanged: (v) => setState(() => repeat = v),
+                        ),
+                      ],
                     ),
-                    value: repeat,
-                    onChanged: (v) => setState(() => repeat = v),
                   ),
                 ],
               ),
