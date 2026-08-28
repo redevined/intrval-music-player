@@ -31,11 +31,16 @@ class PlaylistRepository {
       (_db.delete(_db.playlists)..where((p) => p.id.equals(id))).go();
 
   /// Songs in a playlist, in their stored order, joined with song data.
+  /// Excludes hidden songs - including ones the library scanner hid
+  /// automatically because their backing file was moved/deleted (see
+  /// [MusicLibraryScanner]) - so a playlist never surfaces a song it can't
+  /// actually play.
   Stream<List<Song>> watchSongs(String playlistId) {
     final query = _db.select(_db.playlistSongs).join([
       innerJoin(_db.songs, _db.songs.id.equalsExp(_db.playlistSongs.songId)),
     ])
-      ..where(_db.playlistSongs.playlistId.equals(playlistId))
+      ..where(_db.playlistSongs.playlistId.equals(playlistId) &
+          _db.songs.isHidden.equals(false))
       ..orderBy([OrderingTerm.asc(_db.playlistSongs.sortIndex)]);
     return query.watch().map(
           (rows) => rows.map((r) => r.readTable(_db.songs)).toList(),

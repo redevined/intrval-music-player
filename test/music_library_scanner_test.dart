@@ -160,4 +160,58 @@ void main() {
       reason: 'songs with a stored BPM should not be re-analyzed',
     );
   });
+
+  test('rescanning hides a song whose file was deleted since import',
+      () async {
+    final bpm = _BlockingBpmService();
+    final scanner = buildScanner(bpm);
+    await scanner.scan();
+    await pumpEventQueue();
+    await bpm.release(bpm: 120);
+    await bpm.release(bpm: 121);
+    await bpm.release(bpm: 122);
+
+    await File(p.join(musicDir.path, 'b.mp3')).delete();
+    await scanner.scan();
+    await pumpEventQueue();
+
+    final visible = await songs.watchAll().first;
+    expect(
+      visible.map((s) => s.title),
+      containsAll(<String>['a', 'c']),
+    );
+    expect(
+      visible.map((s) => s.title),
+      isNot(contains('b')),
+      reason: 'the song for the deleted file should no longer be visible',
+    );
+
+    final hidden = await songs.watchAll(onlyHidden: true).first;
+    expect(
+      hidden.map((s) => s.title),
+      ['b'],
+      reason: 'it should be hidden, not gone outright, so it can be undone',
+    );
+  });
+
+  test('rescanning does not touch already-hidden songs whose file is fine',
+      () async {
+    final bpm = _BlockingBpmService();
+    final scanner = buildScanner(bpm);
+    await scanner.scan();
+    await pumpEventQueue();
+    await bpm.release(bpm: 120);
+    await bpm.release(bpm: 121);
+    await bpm.release(bpm: 122);
+
+    final all = await songs.watchAll().first;
+    final b = all.firstWhere((s) => s.title == 'b');
+    await songs.setHidden(b.id, true);
+
+    await scanner.scan();
+    await pumpEventQueue();
+
+    final hidden = await songs.watchAll(onlyHidden: true).first;
+    expect(hidden.map((s) => s.title), ['b']);
+  });
 }

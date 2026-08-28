@@ -16,8 +16,9 @@ import 'file_import_service.dart';
 const defaultLibraryRoots = [AppDefaults.musicRootFolder];
 
 /// Scans [defaultLibraryRoots] for audio files not yet imported and imports
-/// them. Safe to call repeatedly - already-imported files (matched by their
-/// filesystem path) are skipped.
+/// them, then hides any previously-imported song whose file is no longer
+/// there (see [_hideDeletedFiles]). Safe to call repeatedly - already-
+/// imported files (matched by their filesystem path) are skipped.
 ///
 /// Work is deliberately split in two: importing a file only needs its tag
 /// header (fast), while BPM detection decodes the whole file (seconds per
@@ -90,6 +91,7 @@ class MusicLibraryScanner {
   Future<void> _doScan() async {
     if (!await _ensurePermission()) return;
     await _importNewFiles();
+    await _hideDeletedFiles();
     unawaited(_detectMissingBpm());
   }
 
@@ -115,6 +117,25 @@ class MusicLibraryScanner {
           durationMs: metadata.durationMs,
         );
       }
+    }
+  }
+
+  /// Hides songs whose backing file is no longer present on disk (moved or
+  /// deleted since import), on the assumption that a file still absent
+  /// after this complete directory scan was simply removed. Reuses the
+  /// existing "hidden" flag rather than a separate missing-file state, so
+  /// a false positive (e.g. a removable volume that was briefly unmounted)
+  /// stays reversible from Settings > Hidden songs instead of losing the
+  /// song's BPM/favorite data outright.
+  ///
+  /// Only checks plain filesystem paths - a `content://` SAF uri needs a
+  /// document-provider round trip to check, not a bare file stat.
+  Future<void> _hideDeletedFiles() async {
+    final visible = await _songRepository.allVisible();
+    for (final song in visible) {
+      if (song.uri.startsWith('content://')) continue;
+      if (await File(song.uri).exists()) continue;
+      await _songRepository.setHidden(song.id, true);
     }
   }
 

@@ -169,4 +169,10 @@ class SongRepository {
     final rows = await (_db.selectOnly(_db.songs)..addColumns([_db.songs.uri])).get();
     return rows.map((r) => r.read(_db.songs.uri)!).toSet();
   }
+
+  /// Songs not currently hidden - the input to [MusicLibraryScanner]'s
+  /// moved/deleted-file detector, which only needs to check files that
+  /// aren't already flagged.
+  Future<List<Song>> allVisible() =>
+      (_db.select(_db.songs)..where((s) => s.isHidden.equals(false))).get();
 }

@@ -29,9 +29,12 @@ class Songs extends Table {
   TextColumn get sourceFolderId =>
       text().nullable().references(BookmarkedFolders, #id)();
 
-  /// Hidden songs are excluded from the Library list by default (but still
-  /// exist for playlists/sets that already reference them). Toggled from
-  /// the Library's per-song menu; a "show hidden" filter reveals them again.
+  /// Hidden songs are excluded from the Library list and from every
+  /// playlist (see [PlaylistRepository.watchSongs]). Toggled manually from
+  /// the Library's per-song menu, or set automatically by
+  /// [MusicLibraryScanner] when a song's backing file is no longer found on
+  /// disk (moved/deleted). A "show hidden" filter in Settings reveals them
+  /// again for manual unhiding either way.
   BoolColumn get isHidden => boolean().withDefault(const Constant(false))();
 
   /// Toggled from the Library/Playlist three-dot menu and the player's
