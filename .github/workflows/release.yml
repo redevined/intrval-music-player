@@ -1,0 +1,40 @@
+name: Release
+
+# Builds a release APK and attaches it to the GitHub release for the pushed
+# tag, via the Flutter Release Action:
+# https://github.com/marketplace/actions/flutter-release-action
+#
+# Push a tag matching the `version:` in pubspec.yaml (e.g. `v0.9.1` for
+# `version: 0.9.1+18`) to trigger it - this replaces the previously manual
+# `flutter build apk --release` + `gh release create` steps.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - uses: oberhauser-dev/flutter-release-action@v0
+        with:
+          token: ${{ github.token }}
+          dry-run: false
+          tag: ${{ github.ref }}
+          build-type: apk
